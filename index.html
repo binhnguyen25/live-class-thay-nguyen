@@ -113,6 +113,7 @@ body.stage-only #stage{transform:none}
       <div class="row" style="margin-top:6px"><div><label>Nguồn giọng đọc</label>
       <select id="voiceMode"><option value="edge-nam" selected>👨 Nam Minh — giọng NAM (Edge, khuyên dùng cho Thầy Nguyên)</option><option value="edge-nu">👩 Hoài My — giọng nữ (Edge)</option><option value="google">🔊 Giọng Google (nữ, dự phòng)</option><option value="device">🖥️ Giọng Việt trên máy (nếu có)</option></select></div></div>
       <div id="voiceStatus" class="note" style="margin-top:8px">🔊 Đang kiểm tra giọng trên máy thầy…</div>
+      <div id="voiceLog" class="note" style="margin-top:6px;font-size:12px;opacity:.85">📋 Nhật ký giọng đọc sẽ hiện ở đây (để biết chính xác kẹt ở bước nào).</div>
     </div>
 
     <div class="card">
@@ -432,6 +433,22 @@ function buildDeck(){ const tops = activeTopics(); const pool = BANK.filter(q=>t
 let ttsAudio=null, ttsQueue=[], ttsPlaying=false;
 function viVoices(){ try{ return speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.toLowerCase().startsWith("vi")); }catch(e){ return []; } }
 function setVoiceStatus(html){ const el=$("voiceStatus"); if(el) el.innerHTML=html; }
+function vlog(msg){
+  const el=$("voiceLog"); if(!el) return;
+  const t=new Date().toLocaleTimeString("vi-VN");
+  const lines=(el.innerHTML||"").split("<br>").filter(Boolean);
+  lines.push(t+" — "+msg);
+  el.innerHTML=lines.slice(-8).join("<br>");
+}
+if(typeof EdgeTTS!=="undefined"&&EdgeTTS.debug) EdgeTTS.debug((type,info)=>{
+  if(type==="connecting") vlog("Edge: đang kết nối tới máy chủ Microsoft…");
+  if(type==="ws-open") vlog("Edge: đã kết nối, đang gửi câu chữ…");
+  if(type==="audio-bytes") vlog("Edge: nhận "+(info.total||info.bytes||0).toLocaleString("vi-VN")+" byte tiếng…");
+  if(type==="turn-end") vlog("Edge: máy chủ gửi xong ("+(info.bytes||0).toLocaleString("vi-VN")+" byte).");
+  if(type==="ws-error") vlog("Edge: kết nối bị lỗi/từ chối.");
+  if(type==="ws-close") vlog("Edge: kết nối đóng (mã "+(info.code!=null?info.code:"?")+").");
+  if(type==="timeout") vlog("Edge: chờ 20 giây không thấy tiếng trả về.");
+});
 function chunkText(text){ const parts=(text.match(/[^.!?,;:\n]+[.!?,;:\n]?/g)||[text]).map(s=>s.trim()).filter(Boolean); const out=[]; let cur=""; const flush=()=>{ if(cur.trim()) out.push(cur.trim()); cur=""; };
   for(const p of parts){ if(p.length>170){ flush(); const words=p.split(/\s+/); let w=""; for(const x of words){ if((w+" "+x).trim().length>170){ if(w.trim()) out.push(w.trim()); w=x; } else w=(w+" "+x).trim(); } if(w.trim()) out.push(w.trim()); continue; }
     if((cur+" "+p).trim().length>170){ flush(); cur=p; } else cur=(cur+" "+p).trim(); }
@@ -458,6 +475,7 @@ function speakGoogle(text,quiet){
       if(pr&&pr.catch) pr.catch(err=>{
         if(item.host===0){ item.host=1; ttsQueue.unshift(item); playNext(); return; }
         ttsPlaying=false;
+        vlog("Google: phát lỗi ("+(err&&err.name?err.name:"?")+").");
         if(!quiet) setVoiceStatus(`⚠️ Trình duyệt không cho phát tiếng (${err&&err.name?err.name:"không rõ lý do"}) — thường do tab đang tắt tiếng hoặc trình duyệt chặn tự phát tiếng. Thầy kiểm tra biểu tượng loa trên tab, bật tiếng tab lên rồi bấm “Nghe thử” lại.`);
       });
     }catch(e){ ttsPlaying=false; }
@@ -512,7 +530,8 @@ function speak(text,quiet){
   const mode=($("voiceMode")&&$("voiceMode").value)||"edge-nam";
   if(mode==="edge-nam"||mode==="edge-nu"){
     const voice=mode==="edge-nam"?"vi-VN-NamMinhNeural":"vi-VN-HoaiMyNeural";
-    speakEdge(text,voice,quiet).catch(()=>{
+    speakEdge(text,voice,quiet).catch((e)=>{
+      vlog("Edge lỗi ("+(e&&e.message?e.message:"?")+"), chuyển sang giọng Google.");
       if(!quiet) setVoiceStatus("⚠️ Giọng Edge không dùng được lúc này (máy chủ Microsoft từ chối hoặc mạng chặn), chuyển sang giọng Google dự phòng.");
       speakGoogle(text,quiet);
     });
