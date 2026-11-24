@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LIVE-CLASS Thầy Nguyên — Lớp Học Tương Tác TikTok LIVE</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--gold:#f5b301;--green:#16a34a;--red:#dc2626;--blue:#2563eb;--ink:#1e293b;--panel:#ffffff;--bg:#0f172a}
+body{font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+a{color:#facc15}
+h1{font-size:22px}h2{font-size:16px;margin:14px 0 8px}h3{font-size:14px;margin:10px 0 6px}
+button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:700;font-size:14px;background:#e2e8f0;color:#0f172a}
+button:hover{filter:brightness(.95)}button.primary{background:var(--gold);color:#451a03}
+button.green{background:var(--green);color:#fff}button.red{background:var(--red);color:#fff}
+button.blue{background:var(--blue);color:#fff}button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid #cbd5e1;border-radius:9px;font-size:14px;margin:4px 0;background:#fff;color:#0f172a}
+label{font-size:13px;font-weight:600;color:#334155}
+small{color:#64748b}
+.tag{display:inline-block;background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700}
+/* ===== DASHBOARD ===== */
+#dash{display:flex;gap:16px;padding:16px;align-items:flex-start;flex-wrap:wrap}
+#controls{flex:1;min-width:340px;max-width:560px;background:var(--panel);border-radius:16px;padding:18px}
+#controls .head{background:linear-gradient(135deg,#f59e0b,#dc2626);color:#fff;border-radius:12px;padding:14px}
+#controls .head p{font-size:13px;opacity:.95;margin-top:4px}
+.card{border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-top:12px;background:#f8fafc}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.note{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;font-size:13px;line-height:1.55;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 4px;border-bottom:1px solid #e2e8f0;text-align:left}
+th{color:#64748b}
+.feedbox{max-height:150px;overflow:auto;background:#0f172a;color:#e2e8f0;border-radius:10px;padding:10px;font-size:13px;line-height:1.7}
+.feedbox b{color:#facc15}
+#stageWrap{flex:1;min-width:340px;display:flex;flex-direction:column;align-items:center;gap:10px}
+#stageWrap .bar{color:#e2e8f0;font-size:13px;text-align:center}
+#stageWrap .bar b{color:#facc15}
+/* ===== STAGE 1080x1920 ===== */
+#stageScaler{width:405px;height:720px;overflow:hidden;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.6);border:4px solid #334155;background:#7dd3fc}
+#stage{width:1080px;height:1920px;transform:scale(.375);transform-origin:top left;position:relative;background:linear-gradient(180deg,#bae6fd 0%,#fef9c3 34%,#fde68a 100%);color:#1e293b;overflow:hidden;font-size:28px}
+body.stage-only{background:#000;display:flex;justify-content:center}
+body.stage-only #dash{display:none}
+body.stage-only #stageScaler{width:1080px;height:1920px;transform:none;border:0;border-radius:0;box-shadow:none}
+body.stage-only #stage{transform:none}
+.st-top{position:absolute;top:0;left:0;right:0;height:110px;background:linear-gradient(90deg,#b91c1c,#f59e0b);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 30px;font-weight:800}
+.st-top .live{background:#fff;color:#dc2626;border-radius:30px;padding:8px 20px;font-size:26px}
+.st-top .mid{text-align:center;line-height:1.25}.st-top .mid small{color:#fff;font-size:22px}
+.st-board{position:absolute;top:130px;left:40px;right:40px;background:#14532d;border:10px solid #92400e;border-radius:18px;color:#fff;padding:26px 30px;min-height:340px}
+.st-board .topic{color:#facc15;font-weight:800;font-size:26px;letter-spacing:1px}
+.st-board .q{font-size:40px;font-weight:800;line-height:1.35;margin:12px 0}
+.st-board .opts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+.st-board .opt{background:rgba(255,255,255,.14);border:3px solid rgba(255,255,255,.5);border-radius:14px;padding:14px 18px;font-size:30px;font-weight:700}
+.st-board .opt.correct{background:#facc15;color:#451a03;border-color:#fff}
+.st-board .opt.wrong{opacity:.45}
+.st-board .hint{font-size:24px;color:#bbf7d0;margin-top:12px}
+.st-teacher{position:absolute;top:500px;left:40px;right:40px;display:flex;gap:24px;align-items:center}
+.teacher-face{width:190px;height:190px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:130px;border:6px solid #f59e0b;flex-shrink:0}
+.speech{flex:1;background:#fff;border-radius:20px;padding:20px 24px;font-size:30px;line-height:1.45;box-shadow:0 8px 20px rgba(0,0,0,.18);position:relative}
+.speech:before{content:'';position:absolute;left:-18px;top:60px;border:10px solid transparent;border-right-color:#fff}
+.speech b{color:#b91c1c}
+.st-timer{position:absolute;top:730px;left:40px;right:40px;height:22px;background:#e2e8f0;border-radius:20px;overflow:hidden}
+.st-timer i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#f59e0b);width:100%}
+.st-seats{position:absolute;top:775px;left:30px;right:30px}
+.st-seats .title{font-weight:800;font-size:26px;margin-bottom:12px;display:flex;justify-content:space-between}
+.seatgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.seat{background:rgba(255,255,255,.92);border-radius:16px;padding:10px 6px;text-align:center;min-height:150px;box-shadow:0 4px 10px rgba(0,0,0,.12);position:relative}
+.seat.empty{opacity:.55;background:rgba(255,255,255,.55)}
+.seat .av{font-size:56px;line-height:1}
+.seat .nm{font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat .pt{font-size:20px;color:#b91c1c;font-weight:800}
+.seat .streak{position:absolute;top:6px;right:8px;font-size:20px}
+.seat.raised{outline:4px solid #f59e0b;animation:bob 1s infinite}
+@keyframes bob{50%{transform:translateY(-8px)}}
+.st-side{position:absolute;left:40px;right:40px;top:1560px;display:flex;gap:16px}
+.st-panel{flex:1;background:rgba(255,255,255,.95);border-radius:16px;padding:16px 18px;font-size:24px;line-height:1.5;min-height:170px}
+.st-panel b{color:#b91c1c}.st-panel h4{font-size:24px;margin-bottom:6px}
+.st-feed{position:absolute;left:0;right:0;bottom:0;height:150px;background:rgba(15,23,42,.92);color:#fff;padding:14px 30px;font-size:24px;line-height:1.6;overflow:hidden}
+.st-feed b{color:#facc15}
+.overlay{position:absolute;inset:0;background:rgba(15,23,42,.88);color:#fff;display:none;align-items:center;justify-content:center;text-align:center;padding:60px;z-index:5}
+.overlay.show{display:flex}
+.overlay h2{font-size:64px;margin-bottom:18px}.overlay p{font-size:34px;line-height:1.6}
+.overlay .big{font-size:110px}
+.goldq{color:#facc15}
+@media(max-width:900px){#dash{flex-direction:column}#stageScaler{width:340px;height:604px}#stage{transform:scale(.315)}}
+</style>
+</head>
+<body>
+<div id="dash">
+  <div id="controls">
+    <div class="head">
+      <h1>🏫 LIVE-CLASS — Thầy Nguyên</h1>
+      <p>Lớp học tương tác TikTok LIVE • Khổ dọc 1080×1920 • 4 kỳ • 20 câu / buổi • Học bạ Lớp 1 → Tú Tài</p>
+      <p style="margin-top:8px"><span class="tag">👨‍🏫 Giáo viên: Thầy Nguyên</span> <span class="tag" id="liveTag">⚪ Chưa lên sóng</span></p>
+    </div>
+    <div class="note">📌 <b>Bản web chạy trên trình duyệt (GitHub Pages).</b> Bản này <b>không kết nối trực tiếp TikTok LIVE</b> như bản gốc chạy máy chủ Node — TikTok không cho web tĩnh đọc bình luận live. Thầy dùng <b>bộ giả lập bình luận</b> bên dưới để tập dượt, và <b>chấm điểm tay</b>: gõ tên bạn trả lời đúng theo thứ tự, hệ thống tự cộng điểm, xếp hạng, lưu học bạ. Khi live thật, mở <b>?view=stage</b> đưa vào TikTok LIVE Studio / OBS (1080×1920).</div>
+
+    <div class="card">
+      <h2>📡 1. Kết nối &amp; giọng đọc Thầy Nguyên</h2>
+      <label>Tên kênh TikTok của thầy</label>
+      <input id="channel" placeholder="@thaynguyen..." value="@thaynguyen">
+      <div class="row">
+        <button class="primary" onclick="connectLive()">🔴 Kết nối (giả lập)</button>
+        <button onclick="disconnectLive()">⏹ Ngắt kết nối</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div><label>Giọng đọc (máy của thầy)</label>
+        <select id="voiceSel"><option value="">— Tự chọn giọng Việt —</option></select></div>
+        <div><label>Tốc độ đọc</label>
+        <select id="rateSel"><option value="0.9">Chậm 0.9</option><option value="1" selected>Bình thường 1.0</option><option value="1.15">Nhanh 1.15</option></select></div>
+      </div>
+      <label><input type="checkbox" id="ttsOn" checked style="width:auto"> 🔊 Thầy Nguyên đọc câu hỏi &amp; lời khen bằng giọng nói</label>
+      <div class="row" style="margin-top:6px"><button onclick="testVoice()">🎙️ Nghe thử giọng Thầy Nguyên</button></div>
+    </div>
+
+    <div class="card">
+      <h2>🎮 2. Điều khiển buổi học</h2>
+      <div class="row">
+        <button class="green" onclick="startClass()">▶️ Bắt đầu buổi học (20 câu)</button>
+        <button class="primary" onclick="nextQuestion()">➡️ Câu tiếp theo</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button onclick="revealAnswer()">✅ Lật đáp án &amp; chấm điểm</button>
+        <button onclick="toggleTimer()">⏱️ Bật / dừng đồng hồ</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button onclick="setLevel(1)">🌱 Kỳ 1 · Khởi động</button>
+        <button onclick="setLevel(2)">⚡ Kỳ 2 · Tăng tốc</button>
+        <button onclick="setLevel(3)">🔥 Kỳ 3 · Bứt phá</button>
+        <button onclick="setLevel(4)">👑 Kỳ 4 · Tú Tài</button>
+      </div>
+      <h3>Chủ đề hôm nay (bỏ tick = không ra câu đó)</h3>
+      <div id="topicBox" class="grid2"></div>
+    </div>
+
+    <div class="card">
+      <h2>✍️ 3. Chấm điểm tay — ghi người trả lời đúng theo thứ tự</h2>
+      <small>Khi đang mở đáp án: ghi tên theo thứ tự trả lời đúng trên live. Hạng 1 +10đ, hạng 2 +7đ, hạng 3 +5đ, hạng 4–5 +3đ, từ hạng 6 +1đ. Câu vàng (câu 5, 10, 15, 20) nhân đôi. Đúng 3 câu liên tiếp trở lên cộng thêm điểm streak 🔥.</small>
+      <div class="row" style="margin-top:6px">
+        <input id="ansName" placeholder="Tên bạn trả lời đúng, VD: Lan Anh">
+        <select id="ansChoice" style="max-width:110px"><option value="">Đáp án</option><option>A</option><option>B</option><option>C</option><option>D</option></select>
+      </div>
+      <div class="row"><button class="blue" onclick="recordAnswer()">➕ Ghi đáp án đúng</button><button onclick="clearAnswers()">🧹 Xóa danh sách câu này</button></div>
+      <div id="ansList" style="font-size:13px;margin-top:8px;line-height:1.7">Chưa có đáp án nào cho câu này.</div>
+    </div>
+
+    <div class="card">
+      <h2>🧪 4. Bộ giả lập khán giả (tập dượt offline)</h2>
+      <div class="grid2">
+        <button onclick="simJoin()">👋 Người vào lớp</button>
+        <button onclick="simComment()">💬 Comment đáp án</button>
+        <button onclick="simFollow()">➕ Follow kênh</button>
+        <button onclick="simHearts()">❤️ 100 tim</button>
+        <button onclick="simGift(5)">🌹 Tặng 5 hoa hồng</button>
+        <button onclick="simGift(120)">👑 Tặng quà lớn</button>
+      </div>
+      <h3>Thêm học sinh / câu hỏi của thầy</h3>
+      <div class="row"><input id="newStudent" placeholder="Tên học sinh mới"><button onclick="addStudent()">➕ Cho vào lớp</button></div>
+      <div class="row"><input id="customQ" placeholder="Câu hỏi tự soạn, VD: 7 x 8 bằng bao nhiêu?"><input id="customA" placeholder="Đáp án đúng" style="max-width:160px"></div>
+      <button onclick="addCustomQ()">➕ Thêm câu hỏi vào ngân hàng</button>
+    </div>
+
+    <div class="card">
+      <h2>🏆 5. Game show lớn &amp; giờ ra chơi</h2>
+      <div class="grid2">
+        <button class="primary" onclick="startEverest()">🏔️ Đường lên đỉnh Everest</button>
+        <button class="primary" onclick="startBell()">🔔 Rung chuông đồng</button>
+        <button onclick="recess()">🎉 Giờ ra chơi (ngẫu nhiên)</button>
+        <button class="red" onclick="endClass()">👋 Tan trường &amp; tổng kết</button>
+      </div>
+      <div id="gameBox" style="font-size:14px;line-height:1.7;margin-top:8px">Chưa mở game nào. Everest: 4 chặng (+10 / +20 / +30 / +50đ). Chuông đồng: 5 câu sinh tồn, ai cao điểm nhất rung chuông.</div>
+    </div>
+
+    <div class="card">
+      <h2>📊 6. Bảng xếp hạng &amp; học bạ</h2>
+      <div id="rankBox"></div>
+      <h3>🎓 Học bạ trọn đời (lưu trên máy thầy)</h3>
+      <div id="lifeBox" style="font-size:13px;line-height:1.7"></div>
+      <div class="row" style="margin-top:8px"><button onclick="resetAll()">↺ Làm mới buổi học</button><button onclick="clearLifetime()">🗑 Xóa học bạ đã lưu</button></div>
+    </div>
+
+    <div class="card">
+      <h2>📺 7. Đưa lên TikTok LIVE Studio / OBS</h2>
+      <small>Mở link stage riêng, Add Source → Browser, dán link, đặt 1080 × 1920.</small>
+      <div class="row" style="margin-top:6px"><input id="stageLink" readonly><button onclick="copyStage()">📋 Copy link stage</button></div>
+      <div class="row"><button onclick="openStage()">🔗 Mở stage tab mới</button><button onclick="downloadCSV()">⬇️ Tải bảng điểm (.csv)</button></div>
+    </div>
+    <p style="margin-top:14px;font-size:12px;color:#94a3b8">LIVE-CLASS Thầy Nguyên — làm theo cảm hứng từ repo LIVE-CLASS (MIT) của Duong Birken. Bản này viết lại hoàn toàn, không dùng ảnh / code gốc. Nhân vật, câu hỏi và lời thoại do Thầy Nguyên làm chủ.</p>
+  </div>
+
+  <div id="stageWrap">
+    <div class="bar">👀 <b>Xem trước sân khấu</b> — đúng tỉ lệ dọc 1080×1920 • Thầy bấm <b>?view=stage</b> để lấy màn hình sạch đưa lên live</div>
+    <div id="stageScaler"><div id="stage">
+      <div class="st-top"><span class="live">● LIVE</span><span class="mid">🏫 LỚP HỌC THẦY NGUYÊN<br><small id="stSub">Kỳ 1 · Khởi động — Câu 0/20</small></span><span id="stFlower">🌹 Quỹ hoa: 0</span></div>
+      <div class="st-board">
+        <div class="topic" id="stTopic">👋 CHÀO MỪNG ĐẾN LỚP HỌC THẦY NGUYÊN</div>
+        <div class="q" id="stQ">Thầy Nguyên chào cả lớp! Bấm “Bắt đầu buổi học” để ra câu đầu tiên nhé.</div>
+        <div class="opts" id="stOpts"></div>
+        <div class="hint" id="stHint"></div>
+      </div>
+      <div class="st-teacher">
+        <div class="teacher-face">👨‍🏫</div>
+        <div class="speech" id="stSpeech">Các em ơi, vào lớp nào! Comment đáp án A, B, C hoặc D — trả lời nhanh nhất được <b>+10 điểm</b> nhé!</div>
+      </div>
+      <div class="st-timer"><i id="stTimerBar"></i></div>
+      <div class="st-seats"><div class="title"><span>🪑 Lớp học — <span id="seatCount">0</span>/30 ghế</span><span id="seatNote">Trả lời đúng để giữ ghế</span></div><div class="seatgrid" id="seatGrid"></div></div>
+      <div class="st-side">
+        <div class="st-panel"><h4>🏆 Top học sinh</h4><div id="stTop"></div></div>
+        <div class="st-panel"><h4>⚔️ Tổ đua tài</h4><div id="stTeams"></div></div>
+      </div>
+      <div class="st-feed" id="stFeed">💬 <b>Thầy Nguyên:</b> Cả lớp ơi, follow kênh để vào bàn học và nhận +5 điểm nhé! 🌹</div>
+      <div class="overlay" id="overlay"><div><div class="big" id="ovBig">🏔️</div><h2 id="ovTitle"></h2><p id="ovText"></p><br><button class="primary" style="font-size:28px;padding:18px 34px" onclick="closeOverlay()">Tiếp tục buổi học ➡️</button></div></div>
+    </div></div>
+    <div class="bar" id="feedMini">💬 Bình luận mới nhất sẽ hiện ở đây.</div>
+  </div>
+</div>
+<script>
+// ===== NGÂN HÀNG CÂU HỎI — 12 chủ đề, mỗi chủ đề 15 câu (180 câu) =====
+// Mỗi câu: q = câu hỏi, o = 4 lựa chọn, a = vị trí đáp án đúng (0-3)
+const TOPICS = ["Toán nhẩm","Tiếng Anh","Lịch sử Việt Nam","Địa lý","Khoa học","Văn học","Ca dao tục ngữ","Đuổi hình Emoji","Đố mẹo","Ẩm thực","Thể thao","Đố vui tổng hợp"];
+const BANK = [
+{t:"Toán nhẩm",q:"15 + 10 bằng bao nhiêu?",o:["20","25","30","35"],a:1},
+{t:"Toán nhẩm",q:"7 × 8 bằng bao nhiêu?",o:["54","56","48","64"],a:1},
+{t:"Toán nhẩm",q:"100 − 37 bằng bao nhiêu?",o:["63","73","67","53"],a:0},
+{t:"Toán nhẩm",q:"9 × 6 bằng bao nhiêu?",o:["52","54","56","48"],a:1},
+{t:"Toán nhẩm",q:"48 : 6 bằng bao nhiêu?",o:["6","7","8","9"],a:2},
+{t:"Toán nhẩm",q:"25 + 25 + 25 bằng bao nhiêu?",o:["65","70","75","80"],a:2},
+{t:"Toán nhẩm",q:"12 × 5 bằng bao nhiêu?",o:["50","55","60","65"],a:2},
+{t:"Toán nhẩm",q:"81 : 9 bằng bao nhiêu?",o:["7","8","9","10"],a:2},
+{t:"Toán nhẩm",q:"Một tá trứng có bao nhiêu quả?",o:["10","11","12","13"],a:2},
+{t:"Toán nhẩm",q:"3² (3 bình phương) bằng bao nhiêu?",o:["6","8","9","12"],a:2},
+{t:"Toán nhẩm",q:"Một giờ có bao nhiêu phút?",o:["30","45","60","90"],a:2},
+{t:"Toán nhẩm",q:"19 + 23 bằng bao nhiêu?",o:["40","41","42","43"],a:2},
+{t:"Toán nhẩm",q:"5 × 9 − 5 bằng bao nhiêu?",o:["35","40","45","50"],a:1},
+{t:"Toán nhẩm",q:"Số chẵn nhỏ nhất có 2 chữ số là số nào?",o:["10","11","12","20"],a:0},
+{t:"Toán nhẩm",q:"Một tuần có bao nhiêu ngày?",o:["5","6","7","8"],a:2},
+{t:"Tiếng Anh",q:"“Cat” trong tiếng Việt nghĩa là gì?",o:["Con chó","Con mèo","Con chim","Con cá"],a:1},
+{t:"Tiếng Anh",q:"“Apple” là quả gì?",o:["Quả cam","Quả táo","Quả chuối","Quả nho"],a:1},
+{t:"Tiếng Anh",q:"“Book” nghĩa là gì?",o:["Quyển sách","Cái bàn","Cây bút","Ngôi nhà"],a:0},
+{t:"Tiếng Anh",q:"“Sun” nghĩa là gì?",o:["Mặt trăng","Ngôi sao","Mặt trời","Đám mây"],a:2},
+{t:"Tiếng Anh",q:"“Dog” trong tiếng Việt là con gì?",o:["Con mèo","Con chó","Con gà","Con vịt"],a:1},
+{t:"Tiếng Anh",q:"“Red” là màu gì?",o:["Màu xanh","Màu vàng","Màu đỏ","Màu trắng"],a:2},
+{t:"Tiếng Anh",q:"“Teacher” nghĩa là gì?",o:["Học sinh","Giáo viên","Bác sĩ","Kỹ sư"],a:1},
+{t:"Tiếng Anh",q:"“Water” nghĩa là gì?",o:["Lửa","Đất","Nước","Gió"],a:2},
+{t:"Tiếng Anh",q:"“Bird” là con gì?",o:["Con cá","Con chim","Con bướm","Con ong"],a:1},
+{t:"Tiếng Anh",q:"“Happy” nghĩa là gì?",o:["Buồn","Vui vẻ","Giận dữ","Mệt mỏi"],a:1},
+{t:"Tiếng Anh",q:"“School” nghĩa là gì?",o:["Bệnh viện","Chợ","Trường học","Công viên"],a:2},
+{t:"Tiếng Anh",q:"“Mother” nghĩa là gì?",o:["Người cha","Người mẹ","Người anh","Người chị"],a:1},
+{t:"Tiếng Anh",q:"“One, two, three” — số tiếp theo là gì?",o:["Five","Four","Six","Seven"],a:1},
+{t:"Tiếng Anh",q:"“Thank you” nghĩa là gì?",o:["Xin chào","Tạm biệt","Cảm ơn","Xin lỗi"],a:2},
+{t:"Tiếng Anh",q:"“Elephant” là con gì?",o:["Con voi","Con hổ","Con sư tử","Con gấu"],a:0},
+{t:"Lịch sử Việt Nam",q:"Ai là người lãnh đạo cuộc khởi nghĩa Lam Sơn?",o:["Trần Hưng Đạo","Lê Lợi","Quang Trung","Ngô Quyền"],a:1},
+{t:"Lịch sử Việt Nam",q:"Trận Bạch Đằng năm 938 gắn với vị anh hùng nào?",o:["Ngô Quyền","Lý Thường Kiệt","Trần Quốc Tuấn","Hai Bà Trưng"],a:0},
+{t:"Lịch sử Việt Nam",q:"Chiến thắng Điện Biên Phủ diễn ra năm nào?",o:["1945","1954","1968","1975"],a:1},
+{t:"Lịch sử Việt Nam",q:"Vua Quang Trung còn có tên gọi khác là gì?",o:["Nguyễn Huệ","Nguyễn Ánh","Lê Lợi","Trần Nhân Tông"],a:0},
+{t:"Lịch sử Việt Nam",q:"Hai Bà Trưng khởi nghĩa vào năm nào?",o:["Năm 40","Năm 938","Năm 1010","Năm 1428"],a:0},
+{t:"Lịch sử Việt Nam",q:"Kinh đô Hoa Lư thuộc triều đại nào đầu tiên?",o:["Nhà Lý","Nhà Đinh","Nhà Trần","Nhà Lê"],a:1},
+{t:"Lịch sử Việt Nam",q:"Lý Thái Tổ dời đô về Thăng Long năm nào?",o:["938","1010","1225","1428"],a:1},
+{t:"Lịch sử Việt Nam",q:"Trần Hưng Đạo nổi tiếng với chiến thắng nào?",o:["Bạch Đằng 1288","Chi Lăng","Đống Đa","Rạch Gầm"],a:0},
+{t:"Lịch sử Việt Nam",q:"Ngày Giải phóng miền Nam, thống nhất đất nước là ngày nào?",o:["30/4/1975","2/9/1945","19/5/1890","7/5/1954"],a:0},
+{t:"Lịch sử Việt Nam",q:"Bác Hồ đọc Tuyên ngôn Độc lập ngày nào?",o:["30/4/1975","2/9/1945","19/8/1945","7/5/1954"],a:1},
+{t:"Lịch sử Việt Nam",q:"Vị vua nào có công dẹp loạn 12 sứ quân?",o:["Đinh Bộ Lĩnh","Lê Hoàn","Lý Công Uẩn","Trần Thái Tông"],a:0},
+{t:"Lịch sử Việt Nam",q:"Chùa Một Cột được xây dựng dưới triều đại nào?",o:["Nhà Đinh","Nhà Lý","Nhà Trần","Nhà Nguyễn"],a:1},
+{t:"Lịch sử Việt Nam",q:"Ai là tác giả của “Bình Ngô đại cáo”?",o:["Nguyễn Trãi","Nguyễn Du","Hồ Xuân Hương","Chu Văn An"],a:0},
+{t:"Lịch sử Việt Nam",q:"Thành Cổ Loa gắn với vị vua nào?",o:["An Dương Vương","Hùng Vương","Ngô Quyền","Lê Lợi"],a:0},
+{t:"Lịch sử Việt Nam",q:"Chiến thắng Đống Đa gắn với Tết nào?",o:["Tết Nguyên đán Kỷ Dậu 1789","Tết Trung thu","Tết Đoan ngọ","Tết Hàn thực"],a:0},
+{t:"Địa lý",q:"Thủ đô của Việt Nam là thành phố nào?",o:["TP. Hồ Chí Minh","Đà Nẵng","Hà Nội","Huế"],a:2},
+{t:"Địa lý",q:"Sông dài nhất Việt Nam là sông nào?",o:["Sông Hồng","Sông Đồng Nai","Sông Cửu Long (Mê Kông)","Sông Thu Bồn"],a:2},
+{t:"Địa lý",q:"Vịnh Hạ Long thuộc tỉnh nào?",o:["Hải Phòng","Quảng Ninh","Thanh Hóa","Nghệ An"],a:1},
+{t:"Địa lý",q:"Đỉnh núi cao nhất Việt Nam là đỉnh nào?",o:["Fansipan","Bà Đen","Langbiang","Ngọc Linh"],a:0},
+{t:"Địa lý",q:"Đồng bằng lớn nhất Việt Nam là đồng bằng nào?",o:["Đồng bằng sông Hồng","Đồng bằng sông Cửu Long","Đồng bằng duyên hải miền Trung","Cao nguyên Lâm Viên"],a:1},
+{t:"Địa lý",q:"Biển Đông nằm ở phía nào của Việt Nam?",o:["Phía Tây","Phía Đông","Phía Bắc","Phía Nam"],a:1},
+{t:"Địa lý",q:"Tỉnh nào có thành phố Đà Lạt?",o:["Đồng Nai","Lâm Đồng","Khánh Hòa","Bình Thuận"],a:1},
+{t:"Địa lý",q:"Cố đô Huế thuộc tỉnh nào?",o:["Quảng Trị","Thừa Thiên Huế","Quảng Nam","Đà Nẵng"],a:1},
+{t:"Địa lý",q:"Sa mạc lớn nhất thế giới là sa mạc nào?",o:["Gobi","Sahara","Kalahari","Atacama"],a:1},
+{t:"Địa lý",q:"Thủ đô của Nhật Bản là thành phố nào?",o:["Osaka","Kyoto","Tokyo","Nagoya"],a:2},
+{t:"Địa lý",q:"Dòng sông nào chảy qua thủ đô Hà Nội?",o:["Sông Đà","Sông Hồng","Sông Lô","Sông Mã"],a:1},
+{t:"Địa lý",q:"Quốc gia nào có diện tích lớn nhất thế giới?",o:["Trung Quốc","Mỹ","Canada","Nga"],a:3},
+{t:"Địa lý",q:"Đảo lớn nhất Việt Nam là đảo nào?",o:["Côn Đảo","Phú Quốc","Cát Bà","Lý Sơn"],a:1},
+{t:"Địa lý",q:"Cao nguyên nào nổi tiếng với cà phê ở Việt Nam?",o:["Cao nguyên Lâm Viên","Tây Nguyên","Cao nguyên Mộc Châu","Cao nguyên đá Đồng Văn"],a:1},
+{t:"Địa lý",q:"Thủ đô của Thái Lan là thành phố nào?",o:["Chiang Mai","Bangkok","Pattaya","Phuket"],a:1},
+{t:"Khoa học",q:"Hành tinh nào gần Mặt Trời nhất?",o:["Sao Kim","Sao Thủy","Trái Đất","Sao Hỏa"],a:1},
+{t:"Khoa học",q:"Nước sôi ở bao nhiêu độ C?",o:["90°C","95°C","100°C","110°C"],a:2},
+{t:"Khoa học",q:"Cơ quan nào giúp con người suy nghĩ?",o:["Tim","Phổi","Não","Gan"],a:2},
+{t:"Khoa học",q:"Cây xanh quang hợp cần khí gì?",o:["Oxy","Cacbonic (CO₂)","Nitơ","Hiđrô"],a:1},
+{t:"Khoa học",q:"Mặt Trăng quay quanh hành tinh nào?",o:["Sao Hỏa","Sao Kim","Trái Đất","Sao Mộc"],a:2},
+{t:"Khoa học",q:"Công thức hóa học của nước là gì?",o:["CO₂","O₂","H₂O","NaCl"],a:2},
+{t:"Khoa học",q:"Con người có bao nhiêu giác quan chính?",o:["3","4","5","6"],a:2},
+{t:"Khoa học",q:"Loài vật nào được gọi là “chúa tể rừng xanh”?",o:["Hổ","Sư tử","Voi","Gấu"],a:1},
+{t:"Khoa học",q:"Trái Đất quay quanh Mặt Trời mất bao lâu?",o:["1 tháng","1 năm","1 ngày","1 tuần"],a:1},
+{t:"Khoa học",q:"Kim loại nào dẫn điện tốt nhất trong các kim loại sau?",o:["Sắt","Đồng","Nhôm","Chì"],a:1},
+{t:"Khoa học",q:"Máu trong cơ thể được bơm đi bởi cơ quan nào?",o:["Phổi","Gan","Tim","Thận"],a:2},
+{t:"Khoa học",q:"Ánh sáng Mặt Trời giúp cơ thể tổng hợp vitamin nào?",o:["Vitamin A","Vitamin B","Vitamin C","Vitamin D"],a:3},
+{t:"Khoa học",q:"Chim cánh cụt sống chủ yếu ở đâu?",o:["Bắc Cực","Nam Cực","Sa mạc","Rừng nhiệt đới"],a:1},
+{t:"Khoa học",q:"Âm thanh truyền nhanh nhất trong môi trường nào?",o:["Chân không","Không khí","Nước","Chất rắn"],a:3},
+{t:"Khoa học",q:"Loài cây nào được mệnh danh là “vua của các loại cây” ở Việt Nam?",o:["Cây tre","Cây đa","Cây bàng","Cây phượng"],a:1},
+{t:"Văn học",q:"Ai là tác giả của “Truyện Kiều”?",o:["Hồ Xuân Hương","Nguyễn Du","Nguyễn Trãi","Bà Huyện Thanh Quan"],a:1},
+{t:"Văn học",q:"Nhân vật chính trong “Truyện Kiều” tên là gì?",o:["Kiều","Vân","Đạm Tiên","Hoạn Thư"],a:0},
+{t:"Văn học",q:"“Dế Mèn phiêu lưu ký” là tác phẩm của ai?",o:["Nam Cao","Tô Hoài","Ngô Tất Tố","Kim Lân"],a:1},
+{t:"Văn học",q:"Bài thơ “Sóng” là của nhà thơ nào?",o:["Xuân Quỳnh","Hồ Xuân Hương","Tố Hữu","Xuân Diệu"],a:0},
+{t:"Văn học",q:"Tác phẩm “Lão Hạc” của nhà văn nào?",o:["Tô Hoài","Nam Cao","Ngô Tất Tố","Nguyễn Công Hoan"],a:1},
+{t:"Văn học",q:"“Chí Phèo” là nhân vật trong tác phẩm của ai?",o:["Nam Cao","Vũ Trọng Phụng","Khái Hưng","Nguyễn Tuân"],a:0},
+{t:"Văn học",q:"Câu “Bầu ơi thương lấy bí cùng” nói về điều gì?",o:["Tình yêu quê hương","Tinh thần tương thân tương ái","Lòng hiếu thảo","Ý chí vươn lên"],a:1},
+{t:"Văn học",q:"Nhà thơ Tố Hữu nổi tiếng với bài thơ nào sau đây?",o:["Việt Bắc","Sóng","Đây thôn Vĩ Dạ","Tràng Giang"],a:0},
+{t:"Văn học",q:"“Tắt đèn” là tác phẩm của nhà văn nào?",o:["Nam Cao","Ngô Tất Tố","Tô Hoài","Vũ Trọng Phụng"],a:1},
+{t:"Văn học",q:"Nhân vật Thánh Gióng gắn với truyền thuyết nào?",o:["Sự tích Hồ Gươm","Phù Đổng Thiên Vương","Sơn Tinh Thủy Tinh","Sự tích Trầu Cau"],a:1},
+{t:"Văn học",q:"“Làng” là truyện ngắn của nhà văn nào?",o:["Kim Lân","Nam Cao","Tô Hoài","Nguyễn Huy Thiệp"],a:0},
+{t:"Văn học",q:"Bài thơ “Đồng chí” của nhà thơ nào?",o:["Tố Hữu","Chính Hữu","Huy Cận","Xuân Diệu"],a:1},
+{t:"Văn học",q:"Nhân vật chị Dậu xuất hiện trong tác phẩm nào?",o:["Lão Hạc","Tắt đèn","Chí Phèo","Vợ nhặt"],a:1},
+{t:"Văn học",q:"“Vợ nhặt” là tác phẩm của nhà văn nào?",o:["Nam Cao","Kim Lân","Tô Hoài","Ngô Tất Tố"],a:1},
+{t:"Văn học",q:"Thể thơ của “Truyện Kiều” là thể thơ gì?",o:["Thất ngôn bát cú","Lục bát","Song thất lục bát","Tự do"],a:1}
+];
+BANK.push(
+{t:"Ca dao tục ngữ",q:"Điền từ còn thiếu: “Có công mài sắt, có ngày nên ...”",o:["vàng","kim","bạc","đá"],a:1},
+{t:"Ca dao tục ngữ",q:"“Một cây làm chẳng nên non, ba cây chụm lại nên ...”",o:["núi cao","hòn núi cao","rừng xanh","nhà cao"],a:1},
+{t:"Ca dao tục ngữ",q:"“Học thầy không tày học ...”",o:["sách","bạn","cô","trường"],a:1},
+{t:"Ca dao tục ngữ",q:"“Uống nước nhớ ...”",o:["nguồn","người đào giếng","cội","suối"],a:0},
+{t:"Ca dao tục ngữ",q:"“Lá lành đùm lá ...”",o:["xanh","vàng","rách","non"],a:2},
+{t:"Ca dao tục ngữ",q:"“Ăn quả nhớ kẻ ...”",o:["trồng cây","hái quả","chăm cây","bán quả"],a:0},
+{t:"Ca dao tục ngữ",q:"“Đi một ngày đàng, học một ...”",o:["chữ hay","sàng khôn","điều hay","bài hay"],a:1},
+{t:"Ca dao tục ngữ",q:"“Gần mực thì đen, gần đèn thì ...”",o:["tối","sáng","nóng","cháy"],a:1},
+{t:"Ca dao tục ngữ",q:"“Có chí thì ...”",o:["nên","thành công","giàu","đỗ đạt"],a:0},
+{t:"Ca dao tục ngữ",q:"“Thương người như thể thương ...”",o:["mình","thân","người nhà","bạn"],a:1},
+{t:"Ca dao tục ngữ",q:"“Một miếng khi đói bằng một gói khi ...”",o:["đói","no","khát","mệt"],a:1},
+{t:"Ca dao tục ngữ",q:"“Tốt gỗ hơn tốt nước ...”",o:["vôi","sơn","sơn mài","bóng"],a:1},
+{t:"Ca dao tục ngữ",q:"“Chớ thấy sóng cả mà ...”",o:["ngã tay chèo","sợ hãi","quay đầu","bỏ thuyền"],a:0},
+{t:"Ca dao tục ngữ",q:"“Kiến tha lâu cũng đầy ...”",o:["nhà","tổ","hang","đường"],a:1},
+{t:"Ca dao tục ngữ",q:"“Dốt đến đâu, học lâu cũng ...”",o:["giỏi","biết","thành tài","đỗ"],a:1},
+{t:"Đuổi hình Emoji",q:"🌧️ + ☀️ gợi thành ngữ nào?",o:["Mưa nắng","Nắng mưa","Mưa thuận gió hòa","Nắng hạn"],a:0},
+{t:"Đuổi hình Emoji",q:"🐟 + 💧 gợi từ nào?",o:["Cá chép","Cá nước","Như cá gặp nước","Cá bơi"],a:2},
+{t:"Đuổi hình Emoji",q:"🌙 + ⭐ gợi từ nào?",o:["Trăng sao","Sao mai","Trăng rằm","Đêm trăng"],a:0},
+{t:"Đuổi hình Emoji",q:"🍚 + 🥢 gợi từ nào?",o:["Ăn cơm","Cơm trắng","Bữa cơm","Nấu cơm"],a:0},
+{t:"Đuổi hình Emoji",q:"🐶 + 🏠 gợi từ nào?",o:["Chó nhà","Chó giữ nhà","Nuôi chó","Chó con"],a:1},
+{t:"Đuổi hình Emoji",q:"🔥 + 💧 gợi thành ngữ nào?",o:["Lửa nước","Nước lửa","Lửa thử vàng","Dầu sôi lửa bỏng"],a:3},
+{t:"Đuổi hình Emoji",q:"📚 + ✏️ gợi từ nào?",o:["Đi học","Học bài","Sách vở","Học sinh"],a:2},
+{t:"Đuổi hình Emoji",q:"🌻 + ☀️ gợi từ nào?",o:["Hoa hướng dương","Hoa mặt trời","Hoa vàng","Hoa nắng"],a:0},
+{t:"Đuổi hình Emoji",q:"🐝 + 🌸 gợi từ nào?",o:["Ong bướm","Ong mật","Ong hút mật","Ong bay"],a:1},
+{t:"Đuổi hình Emoji",q:"🎂 + 🕯️ gợi dịp nào?",o:["Sinh nhật","Đám cưới","Lễ Tết","Khai trương"],a:0},
+{t:"Đuổi hình Emoji",q:"⚽ + 🥅 gợi môn nào?",o:["Bóng rổ","Bóng đá","Bóng chuyền","Cầu lông"],a:1},
+{t:"Đuổi hình Emoji",q:"🍎 + 🍏 gợi từ nào?",o:["Táo đỏ","Táo xanh","Quả táo","Táo tàu"],a:2},
+{t:"Đuổi hình Emoji",q:"🌊 + 🏖️ gợi từ nào?",o:["Biển xanh","Bãi biển","Sóng biển","Đi biển"],a:1},
+{t:"Đuổi hình Emoji",q:"🦁 + 👑 gợi từ nào?",o:["Sư tử","Vua sư tử","Chúa sơn lâm","Sư tử vàng"],a:1},
+{t:"Đuổi hình Emoji",q:"🚗 + 🛣️ gợi từ nào?",o:["Lái xe","Đi xe","Đường xe","Xe chạy"],a:0},
+{t:"Đố mẹo",q:"Cái gì càng giặt càng bẩn?",o:["Quần áo","Nước","Bàn chải","Khăn lau"],a:1},
+{t:"Đố mẹo",q:"Con gì đập thì sống, không đập thì chết?",o:["Con tim","Con gà","Con cá","Con muỗi"],a:0},
+{t:"Đố mẹo",q:"Cái gì có răng mà không cắn được?",o:["Con chó","Cái lược","Cái cưa","Cái kéo"],a:1},
+{t:"Đố mẹo",q:"Thứ gì đi thì nằm, đứng thì nằm, nằm thì đứng?",o:["Cái bàn","Bàn chân","Đôi dép","Cái ghế"],a:1},
+{t:"Đố mẹo",q:"Cái gì bạn càng chia sẻ càng nhiều?",o:["Tiền","Kiến thức","Bánh kẹo","Quần áo"],a:1},
+{t:"Đố mẹo",q:"Một người đàn ông cạo râu mỗi ngày nhưng râu vẫn dài — vì sao?",o:["Anh ta là thợ cạo râu","Anh ta quên cạo","Dao cùn","Anh ta cạo cho người khác"],a:0},
+{t:"Đố mẹo",q:"Cái gì có cổ mà không có đầu?",o:["Cái chai","Cái áo","Cái ly","Cái bình"],a:1},
+{t:"Đố mẹo",q:"Số nào sau đây viết ngược lại vẫn đọc giống hệt?",o:["12","34","88","56"],a:2},
+{t:"Đố mẹo",q:"Cái gì chạy mà không có chân?",o:["Đồng hồ","Xe đạp","Nước","Gió"],a:2},
+{t:"Đố mẹo",q:"Trong 1 năm có bao nhiêu tháng có 28 ngày?",o:["1 tháng","2 tháng","6 tháng","12 tháng"],a:3},
+{t:"Đố mẹo",q:"Cái gì càng lấy đi càng to ra?",o:["Cái hố","Cái bánh","Cái ao","Cái giếng"],a:0},
+{t:"Đố mẹo",q:"Người ta thường làm gì trước khi ngủ?",o:["Đánh răng","Nhắm mắt","Đắp chăn","Tắt đèn"],a:1},
+{t:"Đố mẹo",q:"Quả gì không ăn được mà vẫn gọi là quả?",o:["Quả bóng","Quả táo","Quả cam","Quả dưa"],a:0},
+{t:"Đố mẹo",q:"Cái gì có thể đi khắp thế giới mà vẫn ở một chỗ?",o:["Con tem","Lá thư","Tấm bản đồ","Chiếc điện thoại"],a:0},
+{t:"Đố mẹo",q:"Con gì có 4 chân buổi sáng, 2 chân buổi trưa, 3 chân buổi tối?",o:["Con chó","Con người","Con mèo","Con gà"],a:1},
+{t:"Ẩm thực",q:"Phở là món ăn đặc trưng của nước nào?",o:["Trung Quốc","Thái Lan","Việt Nam","Nhật Bản"],a:2},
+{t:"Ẩm thực",q:"Bánh chưng thường ăn vào dịp nào?",o:["Tết Trung thu","Tết Nguyên đán","Tết Đoan ngọ","Lễ Vu Lan"],a:1},
+{t:"Ẩm thực",q:"Món nào sau đây là đặc sản Hội An?",o:["Cao lầu","Bún bò Huế","Bánh xèo","Cơm tấm"],a:0},
+{t:"Ẩm thực",q:"Bún bò Huế có nguồn gốc từ đâu?",o:["Hà Nội","Huế","Sài Gòn","Đà Nẵng"],a:1},
+{t:"Ẩm thực",q:"Nước mắm Phú Quốc nổi tiếng ở tỉnh nào?",o:["Khánh Hòa","Kiên Giang","Bình Thuận","Cà Mau"],a:1},
+{t:"Ẩm thực",q:"Bánh mì Việt Nam còn được gọi là gì ở nước ngoài?",o:["Banh Mi","Sandwich","Baguette","Burger"],a:0},
+{t:"Ẩm thực",q:"Trái cây nào là đặc sản miền Tây hay làm mứt Tết?",o:["Dừa Bến Tre","Xoài cát","Chôm chôm","Măng cụt"],a:0},
+{t:"Ẩm thực",q:"Cơm tấm thường ăn kèm với món gì?",o:["Sườn nướng","Thịt kho","Cá chiên","Gà luộc"],a:0},
+{t:"Ẩm thực",q:"Chè đậu xanh thường nấu với nguyên liệu nào?",o:["Đường phèn","Muối","Nước mắm","Ớt"],a:0},
+{t:"Ẩm thực",q:"Món gỏi cuốn dùng bánh gì để cuốn?",o:["Bánh phở","Bánh tráng","Bánh đa","Bánh bao"],a:1},
+{t:"Ẩm thực",q:"Cà phê trứng là đặc sản của thành phố nào?",o:["Đà Lạt","Hà Nội","Huế","Hải Phòng"],a:1},
+{t:"Ẩm thực",q:"Bánh xèo miền Tây thường có nhân gì?",o:["Tôm thịt","Cá lóc","Gà xé","Bò tái"],a:0},
+{t:"Ẩm thực",q:"Món chả giò còn gọi là gì ở miền Bắc?",o:["Nem rán","Bánh rán","Chả cá","Nem chua"],a:0},
+{t:"Ẩm thực",q:"Quả nào sau đây có mùi rất nồng nhưng nhiều người mê?",o:["Mít","Sầu riêng","Măng cụt","Dừa"],a:1},
+{t:"Ẩm thực",q:"Trà đá là thức uống quen thuộc ở đâu?",o:["Quán vỉa hè Việt Nam","Nhà hàng Pháp","Quán Nhật","Quán Hàn"],a:0},
+{t:"Thể thao",q:"Đội tuyển bóng đá Việt Nam có biệt danh là gì?",o:["Những chiến binh sao vàng","Rồng vàng","Hổ vàng","Sư tử vàng"],a:0},
+{t:"Thể thao",q:"Môn thể thao vua là môn nào?",o:["Bóng rổ","Bóng đá","Cầu lông","Bóng chuyền"],a:1},
+{t:"Thể thao",q:"Một trận bóng đá có mấy cầu thủ mỗi đội trên sân?",o:["9","10","11","12"],a:2},
+{t:"Thể thao",q:"Quả bóng vàng Việt Nam 2022 thuộc về cầu thủ nào?",o:["Nguyễn Quang Hải","Nguyễn Hoàng Đức","Đỗ Hùng Dũng","Nguyễn Tiến Linh"],a:1},
+{t:"Thể thao",q:"SEA Games được tổ chức mấy năm một lần?",o:["1 năm","2 năm","3 năm","4 năm"],a:1},
+{t:"Thể thao",q:"Môn cầu lông dùng vợt và vật gì để chơi?",o:["Quả bóng","Quả cầu","Quả tạ","Quả bóng bàn"],a:1},
+{t:"Thể thao",q:"Vận động viên bơi lội nổi tiếng Nguyễn Huy Hoàng thi đấu cự ly nào?",o:["Bơi ngắn","Bơi đường dài","Bơi bướm","Bơi ếch"],a:1},
+{t:"Thể thao",q:"Sân vận động quốc gia Mỹ Đình nằm ở thành phố nào?",o:["TP. Hồ Chí Minh","Hà Nội","Đà Nẵng","Hải Phòng"],a:1},
+{t:"Thể thao",q:"Trong bóng đá, đá phạt đền cách khung thành bao xa?",o:["9m","11m","12m","16m"],a:1},
+{t:"Thể thao",q:"Môn võ cổ truyền nào là quốc võ của Việt Nam?",o:["Karate","Vovinam","Taekwondo","Judo"],a:1},
+{t:"Thể thao",q:"Olympic được tổ chức mấy năm một lần?",o:["2 năm","3 năm","4 năm","5 năm"],a:2},
+{t:"Thể thao",q:"Cầu thủ nào được gọi là “Messi Việt Nam” một thời?",o:["Công Phượng","Quang Hải","Văn Toàn","Xuân Trường"],a:0},
+{t:"Thể thao",q:"Đội tuyển nữ Việt Nam từng dự World Cup nữ năm nào?",o:["2019","2023","2015","2027"],a:1},
+{t:"Thể thao",q:"Trong cờ vua, quân nào chỉ đi chéo?",o:["Xe","Mã","Tượng","Hậu"],a:2},
+{t:"Thể thao",q:"Môn thể thao nào dùng gậy đánh bóng nhỏ vào lỗ?",o:["Bóng chày","Golf","Khúc côn cầu","Bida"],a:1},
+{t:"Đố vui tổng hợp",q:"Thủ đô Hà Nội có hồ nào nổi tiếng ở trung tâm?",o:["Hồ Tây","Hồ Gươm","Hồ Trúc Bạch","Hồ Bảy Mẫu"],a:1},
+{t:"Đố vui tổng hợp",q:"Tết Nguyên đán còn gọi là Tết gì?",o:["Tết Âm lịch","Tết Dương lịch","Tết Đoan ngọ","Tết Trung thu"],a:0},
+{t:"Đố vui tổng hợp",q:"Bánh trung thu ăn vào dịp nào?",o:["Tết Nguyên đán","Tết Trung thu","Tết Hàn thực","Lễ Vu Lan"],a:1},
+{t:"Đố vui tổng hợp",q:"Con vật nào là biểu tượng của năm 2026?",o:["Ngựa","Rắn","Dê","Khỉ"],a:0},
+{t:"Đố vui tổng hợp",q:"Áo dài là trang phục truyền thống của nước nào?",o:["Trung Quốc","Hàn Quốc","Việt Nam","Nhật Bản"],a:2},
+{t:"Đố vui tổng hợp",q:"Nón lá thường được làm từ lá gì?",o:["Lá chuối","Lá cọ","Lá dừa","Lá sen"],a:1},
+{t:"Đố vui tổng hợp",q:"Đàn bầu có mấy dây?",o:["1 dây","2 dây","3 dây","5 dây"],a:0},
+{t:"Đố vui tổng hợp",q:"Chữ Quốc ngữ do ai sáng tạo nên hệ thống?",o:["Alexandre de Rhodes","Nguyễn Du","Trương Vĩnh Ký","Phan Châu Trinh"],a:0},
+{t:"Đố vui tổng hợp",q:"Cờ Việt Nam có mấy ngôi sao?",o:["1 sao vàng","2 sao","3 sao","5 sao"],a:0},
+{t:"Đố vui tổng hợp",q:"Ngày Nhà giáo Việt Nam là ngày nào?",o:["20/10","20/11","8/3","1/6"],a:1},
+{t:"Đố vui tổng hợp",q:"Ngày Quốc tế Thiếu nhi là ngày nào?",o:["1/6","1/5","2/9","20/11"],a:0},
+{t:"Đố vui tổng hợp",q:"Sông Hương chảy qua thành phố nào?",o:["Đà Nẵng","Huế","Quảng Trị","Hội An"],a:1},
+{t:"Đố vui tổng hợp",q:"Biển Cửa Lò thuộc tỉnh nào?",o:["Thanh Hóa","Nghệ An","Hà Tĩnh","Quảng Bình"],a:1},
+{t:"Đố vui tổng hợp",q:"Múa rối nước là nghệ thuật truyền thống của vùng nào?",o:["Miền núi phía Bắc","Đồng bằng Bắc Bộ","Miền Trung","Miền Tây"],a:1},
+{t:"Đố vui tổng hợp",q:"Trống đồng Đông Sơn là di sản của nền văn hóa nào?",o:["Văn hóa Óc Eo","Văn hóa Đông Sơn","Văn hóa Sa Huỳnh","Văn hóa Champa"],a:1}
+);
+
+// ===== TRẠNG THÁI =====
+const $ = id => document.getElementById(id);
+const LETTERS = ["A","B","C","D"];
+const POINTS = [10,7,5,3,3,1];
+const LEVELS = {1:["🌱 Kỳ 1 · Khởi động","Phòng học nắng ấm, áo dài trắng"],2:["⚡ Kỳ 2 · Tăng tốc","Phòng học hiện đại, sơ mi công sở"],3:["🔥 Kỳ 3 · Bứt phá","Giảng đường trường chuyên, áo dài xanh ngọc"],4:["👑 Kỳ 4 · Tú Tài · Về đích","Điện vinh quang, lễ phục trang trọng"]};
+const NAMES = ["Lan Anh","Minh Khôi","Thu Hằng","Gia Bảo","Phương Linh","Quốc Anh","Thảo Nguyên","Đức Huy","Mai Chi","Tuấn Kiệt","Hồng Nhung","Bảo Châu","Hải Đăng","Ngọc Ánh","Phúc Thịnh","Diệu Linh","Anh Tuấn","Khánh Vy","Minh Quân","Thanh Thảo","Hoàng Nam","Quỳnh Anh","Trọng Nghĩa","Bích Ngọc","Hữu Phước","Thanh Hà","Đình Phong","Ngọc Trâm","Văn Dũng","Tú Anh"];
+const BOYS = ["👦","🧑","👱‍♂️","🧒"]; const GIRLS = ["👧","👩","👱‍♀️","🧑‍🦰"];
+const PRAISE = ["Giỏi quá! Thầy Nguyên tuyên dương em! 🎉","Nhanh như chớp! Cả lớp vỗ tay nào! 👏","Chính xác! Em xứng đáng +10 điểm! ⭐","Tuyệt vời! Thầy tự hào về em! 💛"];
+const TEAMS = ["Tổ 1 🦁 Sư Tử","Tổ 2 🦅 Đại Bàng","Tổ 3 🐬 Cá Heo","Tổ 4 🐼 Gấu Trúc"];
+let S = {live:false, level:1, qNum:0, total:20, deck:[], cur:null, revealed:false, answers:[], students:[], flowers:0, hearts:0, timer:null, tLeft:20, running:false, everest:0, bell:0, game:null};
+let lifetime = JSON.parse(localStorage.getItem("thaynguyen_lifetime")||"{}");
+let customBank = JSON.parse(localStorage.getItem("thaynguyen_customq")||"[]");
+if(customBank.length) BANK.push(...customBank);
+
+function saveLife(){ localStorage.setItem("thaynguyen_lifetime", JSON.stringify(lifetime)); }
+function levelOf(pts){ if(pts>=500) return "🎓 Tốt nghiệp"; if(pts>=400) return "Lớp 12"; if(pts>=300) return "Lớp 10"; if(pts>=200) return "Lớp 8"; if(pts>=120) return "Lớp 6"; if(pts>=60) return "Lớp 4"; if(pts>=25) return "Lớp 2"; return "Lớp 1"; }
+function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function activeTopics(){ return TOPICS.filter(t=>{ const el=$("topic-"+t); return !el || el.checked; }); }
+function buildDeck(){ const tops = activeTopics(); const pool = BANK.filter(q=>tops.includes(q.t)); return shuffle(pool).slice(0,20); }
+function speak(text){ if(!$("ttsOn").checked || !("speechSynthesis" in window)) return; try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang="vi-VN"; u.rate=parseFloat($("rateSel").value||"1"); const v=$("voiceSel").value; if(v){ const vs=speechSynthesis.getVoices().find(x=>x.name===v); if(vs) u.voice=vs; } speechSynthesis.speak(u); }catch(e){} }
+function loadVoices(){ const sel=$("voiceSel"); const vs=speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.toLowerCase().startsWith("vi")); sel.innerHTML='<option value="">— Tự chọn giọng Việt —</option>'+vs.map(v=>`<option>${v.name}</option>`).join(""); if(!vs.length) sel.innerHTML='<option value="">— Máy này chưa có giọng Việt, sẽ dùng giọng mặc định —</option>'; }
+if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+function feed(html){ const f=$("stFeed"); f.innerHTML=html; $("feedMini").innerHTML="💬 "+html.replace(/<[^>]+>/g,""); }
+function say(text){ $("stSpeech").innerHTML=text; speak(text.replace(/<[^>]+>/g,"")); }
+
+// ===== RENDER =====
+function renderSeats(){
+  const g=$("seatGrid"); g.innerHTML="";
+  for(let i=0;i<30;i++){ const st=S.students[i]; const d=document.createElement("div"); d.className="seat"+(st?"":" empty")+(st&&st.raised?" raised":"");
+    if(st){ d.innerHTML=`${st.streak>=3?`<span class="streak">🔥x${st.streak}</span>`:""}<div class="av">${st.av}</div><div class="nm">${st.name}</div><div class="pt">${st.pts}đ · ${levelOf((lifetime[st.name]||0)+st.pts)}</div>`; }
+    else d.innerHTML=`<div class="av">🪑</div><div class="nm">Ghế trống</div><div class="pt">Chờ bạn mới</div>`;
+    g.appendChild(d); }
+  $("seatCount").textContent=S.students.length;
+}
+function renderRank(){
+  const top=[...S.students].sort((a,b)=>b.pts-a.pts).slice(0,5);
+  $("rankBox").innerHTML = top.length? `<table><tr><th>#</th><th>Học sinh</th><th>Điểm</th><th>Streak</th><th>Học bạ</th></tr>${top.map((s,i)=>`<tr><td>${["🥇","🥈","🥉","4","5"][i]}</td><td>${s.name}</td><td><b>${s.pts}</b></td><td>${s.streak>=3?"🔥x"+s.streak:"—"}</td><td>${levelOf((lifetime[s.name]||0)+s.pts)}</td></tr>`).join("")}</table>` : "Chưa có học sinh nào. Bấm “Người vào lớp” để bắt đầu.";
+  $("stTop").innerHTML = top.length? top.map((s,i)=>`${["🥇","🥈","🥉","4.","5."][i]} ${s.name} — <b>${s.pts}đ</b>`).join("<br>") : "Chờ học sinh đầu tiên...";
+  $("stTeams").innerHTML = TEAMS.map((t,i)=>{ const pts=S.students.filter((s,ix)=>ix%4===i).reduce((a,s)=>a+s.pts,0); return `${t} — <b>${pts}đ</b>`; }).join("<br>");
+  const life=Object.entries(lifetime).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  $("lifeBox").innerHTML = life.length? life.map(([n,p])=>`🎓 <b>${n}</b>: ${p}đ tích lũy — ${levelOf(p)}`).join("<br>") : "Chưa lưu học bạ nào. Điểm trong buổi live sẽ cộng dồn vào đây khi tan trường.";
+  $("stFlower").textContent=`🌹 Quỹ hoa: ${S.flowers}`;
+}
+function renderBoard(){
+  const sub=`${LEVELS[S.level][0]} — Câu ${S.qNum}/${S.total}`;
+  $("stSub").textContent=sub;
+  if(!S.cur){ $("stTopic").textContent="👋 CHÀO MỪNG ĐẾN LỚP HỌC THẦY NGUYÊN"; $("stQ").textContent="Thầy Nguyên chào cả lớp! Bấm “Bắt đầu buổi học” để ra câu đầu tiên nhé."; $("stOpts").innerHTML=""; $("stHint").textContent=""; renderSeats(); renderRank(); return; }
+  const gold=[5,10,15,20].includes(S.qNum);
+  $("stTopic").textContent=(gold?"🌟 CÂU HỎI VÀNG ×2 — ":"")+S.cur.t.toUpperCase()+" · "+LEVELS[S.level][0];
+  $("stQ").textContent=S.cur.q;
+  $("stOpts").innerHTML=S.cur.o.map((o,i)=>`<div class="opt ${S.revealed?(i===S.cur.a?"correct":"wrong"):""}">${LETTERS[i]}. ${o}</div>`).join("");
+  $("stHint").textContent=S.revealed?`✅ Đáp án đúng: ${LETTERS[S.cur.a]} — ${S.cur.o[S.cur.a]}${gold?" (câu vàng nhân đôi điểm!)":""}`:"💬 Nghe hết đề rồi mới gõ đáp án nhé — trả lời nhanh nhất được +10 điểm!";
+  renderSeats(); renderRank();
+}
+function renderTopics(){
+  $("topicBox").innerHTML=TOPICS.map(t=>`<label style="display:flex;gap:6px;align-items:center;font-weight:400"><input type="checkbox" id="topic-${t}" checked style="width:auto"> ${t}</label>`).join("");
+}
+renderTopics();
+$("stageLink").value=location.href.split("?")[0]+"?view=stage";
+if(new URLSearchParams(location.search).get("view")==="stage"){ document.body.classList.add("stage-only"); }
+
+// ===== BUỔI HỌC =====
+function startClass(){
+  S.deck=buildDeck(); if(!S.deck.length){ alert("Thầy tick ít nhất 1 chủ đề nhé."); return; }
+  S.qNum=0; S.level=1; S.running=true; S.flowers=0; S.everest=0; S.bell=0;
+  S.students.forEach(s=>{ s.pts=0; s.streak=0; });
+  say("Cả lớp chú ý! Buổi học của <b>Thầy Nguyên</b> bắt đầu! 20 câu hỏi, 4 kỳ, ai nhanh nhất được 10 điểm nhé!");
+  feed(`💬 <b>Thầy Nguyên:</b> Buổi học bắt đầu! Cả lớp sẵn sàng chưa nào? 🙋`);
+  nextQuestion();
+}
+function nextQuestion(){
+  if(!S.deck.length){ say("Thầy chưa bấm bắt đầu buổi học. Bấm “Bắt đầu buổi học” trước nhé!"); return; }
+  if(S.qNum>=S.total){ endClass(); return; }
+  S.cur=S.deck[S.qNum]; S.qNum++; S.revealed=false; S.answers=[];
+  S.level = S.qNum<=5?1:S.qNum<=10?2:S.qNum<=15?3:4;
+  $("ansList").textContent="Chưa có đáp án nào cho câu này.";
+  renderBoard(); startTimer();
+  say(`Câu ${S.qNum}: ${S.cur.q} — Các em chọn A, B, C hay D nào?`);
+}
+function startTimer(){ clearInterval(S.timer); S.tLeft=20; $("stTimerBar").style.width="100%"; S.timer=setInterval(()=>{ S.tLeft--; $("stTimerBar").style.width=Math.max(0,S.tLeft/20*100)+"%"; if(S.tLeft<=0){ clearInterval(S.timer); if(!S.revealed) say("Hết giờ! Thầy lật đáp án nhé — bấm “Lật đáp án & chấm điểm”."); } },1000); }
+function toggleTimer(){ if(S.timer){ clearInterval(S.timer); S.timer=null; say("Thầy đã dừng đồng hồ. Cả lớp cứ từ từ suy nghĩ nhé!"); } else startTimer(); }
+function revealAnswer(){
+  if(!S.cur){ alert("Chưa có câu hỏi nào."); return; }
+  S.revealed=true; clearInterval(S.timer);
+  const gold=[5,10,15,20].includes(S.qNum);
+  let lines=[];
+  S.answers.forEach((nm,idx)=>{
+    const st=S.students.find(s=>s.name===nm); if(!st) return;
+    let pts=POINTS[Math.min(idx,5)]||1; if(gold) pts*=2; st.streak=(st.streak||0)+1;
+    if(st.streak>=3) pts+= (st.streak>=5?5:2);
+    st.pts+=pts; lines.push(`${["🥇","🥈","🥉","🏅","🏅","👏"][Math.min(idx,5)]} ${nm} +${pts}đ`);
+  });
+  // học sinh trả lời sai / không có tên trong danh sách thì streak về 0
+  S.students.forEach(s=>{ if(!S.answers.includes(s.name)) s.streak=0; s.raised=false; });
+  renderBoard();
+  const top=S.answers[0];
+  say(top? `${PRAISE[Math.floor(Math.random()*PRAISE.length)]} Đáp án đúng là <b>${LETTERS[S.cur.a]}</b>. ${lines.join(" · ")}` : `Đáp án đúng là <b>${LETTERS[S.cur.a]} — ${S.cur.o[S.cur.a]}</b>. Cả lớp nhớ nhé, câu sau cố gắng hơn!`);
+  feed(`✅ <b>Thầy Nguyên:</b> Đáp án câu ${S.qNum} là ${LETTERS[S.cur.a]}. ${top?("Chúc mừng "+top+"! 🎉"):"Chưa ai trả lời đúng, cố lên các em!"}`);
+}
+function recordAnswer(){
+  const nm=$("ansName").value.trim(); const ch=$("ansChoice").value;
+  if(!S.cur){ alert("Chưa có câu hỏi nào đang mở."); return; }
+  if(!nm){ alert("Thầy gõ tên bạn trả lời đúng nhé."); return; }
+  if(ch && ch!==LETTERS[S.cur.a]){ alert(`Bạn ${nm} chọn ${ch} là đáp án sai — chỉ ghi những bạn trả lời đúng thôi nhé.`); return; }
+  if(S.answers.includes(nm)){ alert("Bạn này đã ghi rồi."); return; }
+  let st=S.students.find(s=>s.name===nm);
+  if(!st){ st=addStudent(nm,true); }
+  st.raised=true; S.answers.push(nm);
+  $("ansList").innerHTML=S.answers.map((n,i)=>`${i+1}. <b>${n}</b> — dự kiến +${(POINTS[Math.min(i,5)]||1)*([5,10,15,20].includes(S.qNum)?2:1)}đ`).join("<br>");
+  $("ansName").value=""; $("ansChoice").value=""; $("ansName").focus();
+  renderSeats();
+  feed(`💬 <b>${nm}:</b> ${ch||LETTERS[S.cur.a]} — trả lời đúng câu ${S.qNum}! ⚡`);
+}
+function clearAnswers(){ S.answers=[]; $("ansList").textContent="Chưa có đáp án nào cho câu này."; }
+function setLevel(l){ S.level=l; renderBoard(); say(`Cả lớp chuyển sang <b>${LEVELS[l][0]}</b>! ${LEVELS[l][1]}. Cố lên nào!`); }
+
+// ===== HỌC SINH & GIẢ LẬP =====
+function addStudent(name,silent){
+  if(S.students.length>=30){ // nhường ghế cho bạn tích cực nhất: đẩy bạn im lâu nhất ra
+    const out=S.students.shift(); feed(`🪑 <b>${out.name}</b> nhường ghế cho bạn mới tích cực hơn.`); }
+  const nm=name||NAMES[Math.floor(Math.random()*NAMES.length)]+" "+Math.floor(Math.random()*90+10);
+  if(S.students.find(s=>s.name===nm)) return S.students.find(s=>s.name===nm);
+  const girl=Math.random()<0.5;
+  const st={name:nm, av:girl?GIRLS[Math.floor(Math.random()*GIRLS.length)]:BOYS[Math.floor(Math.random()*BOYS.length)], pts:0, streak:0, raised:false};
+  S.students.push(st); renderSeats(); renderRank();
+  if(!silent){ say(`Chào mừng <b>${nm}</b> vào lớp Thầy Nguyên! Em được +5 điểm làm quen nhé!`); st.pts+=5; feed(`👋 <b>${nm}</b> vừa vào lớp! Cả lớp chào bạn mới nào!`); }
+  return st;
+}
+function simJoin(){ const st=addStudent(); }
+function simComment(){
+  if(!S.cur){ alert("Thầy bấm “Bắt đầu buổi học” trước, rồi mới giả lập comment nhé."); return; }
+  const pool=S.students.length?S.students:[addStudent(null,true)];
+  const st=pool[Math.floor(Math.random()*pool.length)];
+  const correct=Math.random()<0.45;
+  const ch=correct?LETTERS[S.cur.a]:LETTERS[Math.floor(Math.random()*4)];
+  st.raised=true; renderSeats();
+  feed(`💬 <b>${st.name}:</b> ${ch} ${correct?"": "— sai rồi, tiếc quá!"}`);
+  if(correct && !S.answers.includes(st.name) && !S.revealed){ S.answers.push(st.name); $("ansList").innerHTML=S.answers.map((n,i)=>`${i+1}. <b>${n}</b>`).join("<br>"); }
+  setTimeout(()=>{ st.raised=false; renderSeats(); },2500);
+}
+function simFollow(){ const st=addStudent(); if(st){ st.pts+=5; renderRank(); feed(`➕ <b>${st.name}</b> vừa follow kênh! +5 điểm, cảm ơn em! ❤️`); } }
+function simHearts(){ S.hearts+=100; feed(`❤️ Cả lớp thả <b>100 tim</b>! Thầy Nguyên cảm ơn các em!`); say("Cảm ơn các em đã thả tim! Tim bay rợp trời luôn! ❤️"); }
+function simGift(n){
+  const st=S.students.length?S.students[Math.floor(Math.random()*S.students.length)]:addStudent(null,true);
+  S.flowers+=n; st.pts+= n>=100?20:5;
+  if(n>=100){ say(`Ôi! <b>${st.name}</b> tặng quà lớn! Em được phong <b>Lớp trưởng VIP 👑</b>! Cả lớp pháo hoa nào! 🎆`); feed(`👑 <b>${st.name}</b> tặng quà lớn! Phong Lớp trưởng VIP! 🎆`); }
+  else { feed(`🌹 <b>${st.name}</b> tặng ${n} hoa hồng! Quỹ hoa của lớp: ${S.flowers} 🌹`); }
+  renderRank();
+}
+function addCustomQ(){
+  const q=$("customQ").value.trim(), a=$("customA").value.trim();
+  if(!q||!a){ alert("Thầy nhập cả câu hỏi và đáp án đúng nhé."); return; }
+  const item={t:"Câu hỏi của Thầy",q,o:[a,"Đáp án khác 1","Đáp án khác 2","Đáp án khác 3"],a:0};
+  BANK.push(item); customBank.push(item); localStorage.setItem("thaynguyen_customq",JSON.stringify(customBank));
+  if(!TOPICS.includes("Câu hỏi của Thầy")){ TOPICS.push("Câu hỏi của Thầy"); renderTopics(); }
+  $("customQ").value=""; $("customA").value=""; alert("Đã thêm câu hỏi của thầy vào ngân hàng!");
+}
+
+// ===== GAME LỚN =====
+function showOverlay(big,title,text){ $("ovBig").textContent=big; $("ovTitle").textContent=title; $("ovText").innerHTML=text; $("overlay").classList.add("show"); }
+function closeOverlay(){ $("overlay").classList.remove("show"); }
+function startEverest(){
+  S.everest++; const ch=S.everest;
+  const pts=[10,20,30,50][ch-1]||50;
+  showOverlay("🏔️","ĐƯỜNG LÊN ĐỈNH EVEREST — Chặng "+Math.min(ch,4)+"/4",`Trả lời nhanh nhất chặng này được <b>+${pts} điểm</b> và bước lên mốc độ cao!<br>Thầy ra câu hỏi Everest — ai lên đỉnh sẽ được Thầy phất cờ vinh danh! 🚩`);
+  say("Cả lớp leo núi nào! Đường lên đỉnh Everest — chặng "+Math.min(ch,4)+"! Ai nhanh nhất được cộng "+pts+" điểm!");
+  if(S.everest>=4) S.everest=0;
+  nextQuestion();
+}
+function startBell(){
+  showOverlay("🔔","RUNG CHUÔNG ĐỒNG","5 câu hỏi sinh tồn liên tiếp! Ai tổng điểm cao nhất sẽ bước lên bục <b>rung chuông đồng</b> nhận danh hiệu Quán quân! 🥇<br>Thầy ra câu đầu tiên của vòng chuông đồng đây!");
+  say("Rung chuông đồng bắt đầu! 5 câu sinh tồn — ai cao điểm nhất sẽ rung chuông vàng!");
+  nextQuestion();
+}
+function recess(){
+  const games=[
+    ["✊✋✌️ OẰN TÙ TÌ","Comment <b>búa / bao / kéo</b> để đấu với Thầy Nguyên! Thắng được +5 điểm!"],
+    ["🎤 KIỂM TRA MIỆNG","Thầy gọi ngẫu nhiên 1 bạn lên bục trả lời câu hỏi riêng — đúng được +15 điểm!"],
+    ["⚔️ ĐẠI CHIẾN CHỌN PHE","Cả lớp chia 2 phe: comment <b>A</b> hoặc <b>B</b>! Phe nào đông và đúng hơn sẽ thắng!"],
+    ["📋 ĐIỂM DANH NHẬN THƯỞNG","Gõ <b>“có”</b> trong 12 giây để nhận ngay +2 điểm chuyên cần!"],
+    ["💃 NHẢY MÚA THẢ TIM","Cả lớp cùng nhún nhảy theo nhạc và thả tim rợp trời! ❤️❤️❤️"]];
+  const g=games[Math.floor(Math.random()*games.length)];
+  showOverlay(g[0].split(" ")[0],g[0],g[1]+"<br><br>⏱️ Giờ ra chơi 25 giây — chơi xong mình học tiếp nhé!");
+  say("Giờ ra chơi! "+g[0]+" — "+g[1].replace(/<[^>]+>/g,""));
+}
+function endClass(){
+  clearInterval(S.timer); S.running=false;
+  const top=[...S.students].sort((a,b)=>b.pts-a.pts).slice(0,3);
+  top.forEach(s=>{ lifetime[s.name]=(lifetime[s.name]||0)+s.pts; }); saveLife();
+  const totalQ=S.qNum, totalSt=S.students.length;
+  showOverlay("👋","LỄ TỔNG KẾT — TAN TRƯỜNG!",`🔔 TÙNG! TÙNG! TÙNG! Hết giờ học rồi!<br><br>👑 Quán quân: <b>${top[0]?top[0].name+" — "+top[0].pts+"đ":"—"}</b><br>🥈 Á quân: <b>${top[1]?top[1].name+" — "+top[1].pts+"đ":"—"}</b><br>🥉 Quý quân: <b>${top[2]?top[2].name+" — "+top[2].pts+"đ":"—"}</b><br><br>📚 ${totalQ} câu hỏi · 👥 ${totalSt} học sinh · 🌹 ${S.flowers} hoa<br>Các em nhớ <b>follow kênh Thầy Nguyên + bật chuông 🔔</b> để mai vào lớp sớm nhé!`);
+  say("Tan trường! Thầy cảm ơn cả lớp! Nhớ follow kênh Thầy Nguyên và bật chuông để mai vào lớp sớm nhé!");
+  feed(`👋 <b>Thầy Nguyên:</b> Tan trường! Hẹn gặp lại các em buổi sau! Nhớ follow kênh nhé! 🔔`);
+  renderRank();
+}
+
+// ===== KẾT NỐI / KHÁC =====
+function connectLive(){
+  const ch=$("channel").value.trim()||"@thaynguyen";
+  S.live=true; $("liveTag").textContent="🔴 Đang giả lập LIVE — "+ch;
+  say(`Thầy Nguyên đã lên sóng kênh <b>${ch}</b>! Cả lớp ơi, vào lớp nào!`);
+  feed(`🔴 <b>Thầy Nguyên</b> vừa lên sóng ${ch}! Comment “vào lớp” để ngồi vào bàn nhé!`);
+  addStudent(); addStudent();
+}
+function disconnectLive(){ S.live=false; $("liveTag").textContent="⚪ Chưa lên sóng"; feed("⏹ Thầy Nguyên đã ngắt kết nối giả lập."); }
+function testVoice(){ say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!"); }
+function resetAll(){ clearInterval(S.timer); S.qNum=0; S.cur=null; S.revealed=false; S.answers=[]; S.flowers=0; S.students.forEach(s=>{s.pts=0;s.streak=0;}); renderBoard(); say("Thầy làm mới buổi học rồi! Bấm bắt đầu để học lại từ đầu nhé!"); }
+function clearLifetime(){ if(confirm("Xóa toàn bộ học bạ đã lưu trên máy này?")){ lifetime={}; saveLife(); renderRank(); } }
+function copyStage(){ $("stageLink").select(); document.execCommand("copy"); navigator.clipboard&&navigator.clipboard.writeText($("stageLink").value); alert("Đã copy link stage!"); }
+function openStage(){ window.open($("stageLink").value,"_blank"); }
+function downloadCSV(){
+  const rows=[["Hang","Ten","Diem","Hoc ba"]]; [...S.students].sort((a,b)=>b.pts-a.pts).forEach((s,i)=>rows.push([i+1,s.name,s.pts,levelOf((lifetime[s.name]||0)+s.pts)]));
+  const blob=new Blob([rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="bang-diem-lop-thay-nguyen.csv"; a.click();
+}
+renderBoard();
+</script>
+</body>
+</html>
