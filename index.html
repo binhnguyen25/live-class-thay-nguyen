@@ -471,8 +471,13 @@ function speakDevice(text){
     const vs=viVoices(); const pick=vs.find(x=>x.name===v)||vs[0];
     if(pick) u.voice=pick;
     // Chrome hay tự dừng khi đọc dài: resume định kỳ
+    let started=false;
+    u.onstart=()=>{ started=true; };
     const keepAlive=setInterval(()=>{ try{ if(speechSynthesis.speaking&&speechSynthesis.paused) speechSynthesis.resume(); }catch(e){} },500);
-    u.onend=()=>clearInterval(keepAlive); u.onerror=()=>clearInterval(keepAlive);
+    // GIÁM SÁT: giọng máy kẹt không cất tiếng (giọng mạng chưa tải về / bị chặn) thì sau 1,8 giây tự chuyển sang giọng Google dự phòng
+    const watchdog=setTimeout(()=>{ try{ if(!started&&!speechSynthesis.speaking){ clearInterval(keepAlive); speakGoogle(text); } }catch(e){} },1800);
+    u.onend=()=>{ clearInterval(keepAlive); clearTimeout(watchdog); };
+    u.onerror=()=>{ clearInterval(keepAlive); clearTimeout(watchdog); if(!started) speakGoogle(text); };
     speechSynthesis.speak(u);
     setTimeout(()=>{ try{ speechSynthesis.resume(); }catch(e){} },200);
     return true;
@@ -697,7 +702,26 @@ function beepTest(){
     setVoiceStatus("🔔 Đã phát <b>tiếng bíp 880Hz trong 0,7 giây</b>. Nếu thầy <b>nghe thấy bíp</b> mà không nghe thấy giọng → loa vẫn tốt, lỗi nằm ở giọng đọc (mạng chặn Google hoặc giọng máy). Nếu <b>không nghe cả bíp</b> → loa / âm lượng / tab đang tắt tiếng, thầy kiểm tra loa và nút tắt tiếng của tab trước.");
   }catch(e){ setVoiceStatus("⚠️ Không phát được tiếng bíp: "+e.message); }
 }
-function testVoice(quiet){ say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!",quiet); }
+let testAudio=null;
+function testVoice(quiet){
+  // Nghe thử dùng file giọng mẫu thu sẵn trên cùng trang (không cần gọi Google lúc bấm).
+  // Nếu file này cũng không kêu thì chắc chắn loa / tab đang có vấn đề, không phải do giọng đọc.
+  if(!quiet){
+    try{
+      if(typeof Audio!=="undefined"){
+        if(!testAudio) testAudio=new Audio();
+        testAudio.src="audio/thay-nguyen-chao.mp3";
+        testAudio.onended=()=>{ setVoiceStatus("✅ Đã phát xong <b>file giọng mẫu Thầy Nguyên</b>. Nếu thầy nghe thấy câu chào thì loa tốt — giờ bấm “Bắt đầu buổi học”, Thầy sẽ đọc câu hỏi bằng giọng dự phòng."); };
+        testAudio.onerror=()=>{ say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!"); };
+        const pr=testAudio.play();
+        if(pr&&pr.catch) pr.catch(()=>{ say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!"); });
+        setVoiceStatus("🔊 Đang phát <b>file giọng mẫu Thầy Nguyên</b> (thu sẵn trên trang)...");
+        return;
+      }
+    }catch(e){}
+  }
+  say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!",quiet);
+}
 function resetAll(){ clearInterval(S.timer); S.qNum=0; S.cur=null; S.revealed=false; S.answers=[]; S.flowers=0; S.students.forEach(s=>{s.pts=0;s.streak=0;}); renderBoard(); say("Thầy làm mới buổi học rồi! Bấm bắt đầu để học lại từ đầu nhé!"); }
 function clearLifetime(){ if(confirm("Xóa toàn bộ học bạ đã lưu trên máy này?")){ lifetime={}; saveLife(); renderRank(); } }
 function copyStage(){ $("stageLink").select(); document.execCommand("copy"); navigator.clipboard&&navigator.clipboard.writeText($("stageLink").value); alert("Đã copy link stage!"); }
