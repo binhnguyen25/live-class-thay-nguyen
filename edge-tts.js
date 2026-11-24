@@ -207,12 +207,15 @@
     var reqId = uuid();
     return new Promise(function (resolve, reject) {
       var chunks = [], done = false, ws, timer;
+      function emit(type, info) { try { if (onEvent) onEvent(type, info || {}); } catch (e) {} }
       function fail(msg) { if (done) return; done = true; try { ws && ws.close(); } catch (e) {} clearTimeout(timer); reject(new Error(msg)); }
       function ok() { if (done) return; done = true; clearTimeout(timer); try { ws.close(); } catch (e) {} var total = 0, i; for (i = 0; i < chunks.length; i++) total += chunks[i].length; var out = new Uint8Array(total), off = 0; for (i = 0; i < chunks.length; i++) { out.set(chunks[i], off); off += chunks[i].length; } resolve(out); }
-      timer = setTimeout(function () { fail("Edge TTS: hết 20 giây vẫn chưa có tiếng trả về"); }, 20000);
-      try { ws = new WebSocket(synthUrl()); } catch (e) { fail("Edge TTS: không mở được kết nối (" + e.message + ")"); return; }
+      timer = setTimeout(function () { emit("timeout", {}); fail("Edge TTS: hết 20 giây vẫn chưa có tiếng trả về"); }, 20000);
+      emit("connecting", {});
+      try { ws = new WebSocket(synthUrl()); } catch (e) { emit("ws-error", { message: String(e && e.message || e) }); fail("Edge TTS: không mở được kết nối (" + e.message + ")"); return; }
       ws.binaryType = "arraybuffer";
       ws.onopen = function () {
+        emit("ws-open", {});
         try {
           ws.send("X-Timestamp:" + dateStr() + "\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{\"context\":{\"synthesis\":{\"audio\":{\"metadataoptions\":{\"sentenceBoundaryEnabled\":\"false\",\"wordBoundaryEnabled\":\"false\"},\"outputFormat\":\"audio-24khz-48kbitrate-mono-mp3\"}}}}\r\n");
           ws.send("X-RequestId:" + reqId + "\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:" + dateStr() + "Z\r\nPath:ssml\r\n\r\n" + ssml);
@@ -221,7 +224,7 @@
       ws.onmessage = function (ev) {
         try {
           if (typeof ev.data === "string") {
-            if (ev.data.indexOf("Path:turn.end") !== -1) { if (chunks.length) ok(); else fail("Edge TTS: máy chủ trả về nhưng không có tiếng"); }
+            if (ev.data.indexOf("Path:turn.end") !== -1) { emit("turn-end", { bytes: chunks.reduce(function (a, c) { return a + c.length; }, 0) }); if (chunks.length) ok(); else fail("Edge TTS: máy chủ trả về nhưng không có tiếng"); }
             return;
           }
           var buf = new Uint8Array(ev.data);
@@ -232,15 +235,16 @@
           for (var i = 2; i < 2 + hl; i++) head += String.fromCharCode(buf[i]);
           if (head.indexOf("Path:audio") === -1) return;
           var audio = buf.slice(2 + hl);
-          if (audio.length) chunks.push(audio);
+          if (audio.length) { chunks.push(audio); emit("audio-bytes", { bytes: audio.length, total: chunks.reduce(function (a, c) { return a + c.length; }, 0) }); }
         } catch (e) { fail("Edge TTS: lỗi xử lý tiếng trả về (" + e.message + ")"); }
       };
-      ws.onerror = function () { fail("Edge TTS: kết nối bị từ chối (máy chủ không chấp nhận giọng này lúc này)"); };
-      ws.onclose = function () { if (!done) { if (chunks.length) ok(); else fail("Edge TTS: kết nối đóng mà chưa có tiếng"); } };
+      ws.onerror = function () { emit("ws-error", {}); fail("Edge TTS: kết nối bị từ chối (máy chủ không chấp nhận giọng này lúc này)"); };
+      ws.onclose = function (e) { emit("ws-close", { code: e && e.code, reason: e && e.reason }); if (!done) { if (chunks.length) ok(); else fail("Edge TTS: kết nối đóng mà chưa có tiếng (mã đóng " + (e && e.code) + ")"); } };
     });
   }
 
-  var api = { edgeSynth: edgeSynth, secMsGec: secMsGec, synthUrl: synthUrl, VI_MALE: "vi-VN-NamMinhNeural", VI_FEMALE: "vi-VN-HoaiMyNeural" };
+  var onEvent = null;
+  var api = { edgeSynth: edgeSynth, secMsGec: secMsGec, synthUrl: synthUrl, VI_MALE: "vi-VN-NamMinhNeural", VI_FEMALE: "vi-VN-HoaiMyNeural", debug: function (fn) { onEvent = fn; } };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.EdgeTTS = api;
 })(typeof window !== "undefined" ? window : globalThis);
