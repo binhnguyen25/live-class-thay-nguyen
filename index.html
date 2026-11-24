@@ -111,7 +111,7 @@ body.stage-only #stage{transform:none}
       <label><input type="checkbox" id="ttsOn" checked style="width:auto"> 🔊 Thầy Nguyên đọc câu hỏi &amp; lời khen bằng giọng nói</label>
       <div class="row" style="margin-top:6px"><button onclick="testVoice()">🎙️ Nghe thử giọng Thầy Nguyên</button><button onclick="checkVoices()">🔍 Kiểm tra giọng trên máy này</button><button onclick="beepTest()">🔔 Thử loa (tiếng bíp)</button></div>
       <div class="row" style="margin-top:6px"><div><label>Nguồn giọng đọc</label>
-      <select id="voiceMode"><option value="auto" selected>Tự động — giọng máy, không có thì dùng giọng Google dự phòng</option><option value="device">Chỉ dùng giọng Việt trên máy</option><option value="google">Chỉ dùng giọng Google dự phòng (cần mạng)</option></select></div></div>
+      <select id="voiceMode"><option value="edge-nam" selected>👨 Nam Minh — giọng NAM (Edge, khuyên dùng cho Thầy Nguyên)</option><option value="edge-nu">👩 Hoài My — giọng nữ (Edge)</option><option value="google">🔊 Giọng Google (nữ, dự phòng)</option><option value="device">🖥️ Giọng Việt trên máy (nếu có)</option></select></div></div>
       <div id="voiceStatus" class="note" style="margin-top:8px">🔊 Đang kiểm tra giọng trên máy thầy…</div>
     </div>
 
@@ -220,6 +220,7 @@ body.stage-only #stage{transform:none}
     <div class="bar" id="feedMini">💬 Bình luận mới nhất sẽ hiện ở đây.</div>
   </div>
 </div>
+<script src="edge-tts.js"></script>
 <script>
 // ===== NGÂN HÀNG CÂU HỎI — 12 chủ đề, mỗi chủ đề 15 câu (180 câu) =====
 // Mỗi câu: q = câu hỏi, o = 4 lựa chọn, a = vị trí đáp án đúng (0-3)
@@ -483,14 +484,38 @@ function speakDevice(text){
     return true;
   }catch(e){ return false; }
 }
+let edgeAudio=null;
+function speakEdge(text,voice,quiet){
+  const rate=parseFloat($("rateSel").value||"1");
+  const label=voice==="vi-VN-NamMinhNeural"?"Nam Minh (nam)":"Hoài My (nữ)";
+  if(!quiet) setVoiceStatus("🔊 Đang lấy tiếng giọng <b>"+label+"</b> (Edge — Microsoft, miễn phí, cần mạng)...");
+  if(typeof EdgeTTS==="undefined"||!EdgeTTS.edgeSynth) return Promise.reject(new Error("EdgeTTS chưa tải"));
+  return EdgeTTS.edgeSynth(text,voice,rate).then(bytes=>{
+    if(!quiet) setVoiceStatus("✅ Đã nhận "+bytes.length.toLocaleString("vi-VN")+" byte tiếng giọng <b>"+label+"</b>, đang phát...");
+    const url=URL.createObjectURL(new Blob([bytes],{type:"audio/mpeg"}));
+    if(edgeAudio){ try{ edgeAudio.pause(); }catch(e){} }
+    edgeAudio=new Audio(); edgeAudio.src=url;
+    edgeAudio.onended=()=>{ try{ URL.revokeObjectURL(url); }catch(e){} };
+    return edgeAudio.play();
+  });
+}
 function speak(text,quiet){
   if(!$("ttsOn").checked) return;
   text=(text||"").replace(/\s+/g," ").trim(); if(!text) return;
   if(ttsAudio){ try{ ttsAudio.pause(); }catch(e){} ttsPlaying=false; ttsQueue=[]; }
-  const mode=($("voiceMode")&&$("voiceMode").value)||"auto";
+  if(edgeAudio){ try{ edgeAudio.pause(); }catch(e){} }
+  const mode=($("voiceMode")&&$("voiceMode").value)||"edge-nam";
+  if(mode==="edge-nam"||mode==="edge-nu"){
+    const voice=mode==="edge-nam"?"vi-VN-NamMinhNeural":"vi-VN-HoaiMyNeural";
+    speakEdge(text,voice,quiet).catch(()=>{
+      if(!quiet) setVoiceStatus("⚠️ Giọng Edge không dùng được lúc này (máy chủ Microsoft từ chối hoặc mạng chặn), chuyển sang giọng Google dự phòng.");
+      speakGoogle(text,quiet);
+    });
+    return;
+  }
+  if(mode==="google"){ if(!quiet) setVoiceStatus("🔊 Đang đọc bằng <b>giọng Google</b> (nữ, dự phòng, cần mạng)."); speakGoogle(text,quiet); return; }
   const hasVi=("speechSynthesis" in window)&&viVoices().length>0;
-  if(mode==="google"||(!hasVi&&mode==="auto")){ if(!quiet) setVoiceStatus("🔊 Đang đọc bằng <b>giọng Google dự phòng</b> (máy thầy chưa có giọng Việt cài sẵn — vẫn nghe được bình thường, cần mạng)."); speakGoogle(text,quiet); return; }
-  if(!("speechSynthesis" in window)){ if(!quiet) setVoiceStatus("⚠️ Trình duyệt này không hỗ trợ đọc giọng trên máy — đang dùng giọng Google dự phòng."); speakGoogle(text,quiet); return; }
+  if(!("speechSynthesis" in window)||!hasVi){ if(!quiet) setVoiceStatus("⚠️ Máy thầy chưa có giọng Việt — đang dùng giọng Google dự phòng."); speakGoogle(text,quiet); return; }
   if(!speakDevice(text)){ speakGoogle(text,quiet); }
 }
 function loadVoices(){
@@ -499,14 +524,14 @@ function loadVoices(){
   const vs=viVoices();
   sel.innerHTML='<option value="">— Tự chọn giọng Việt —</option>'+vs.map(v=>`<option>${v.name}</option>`).join("");
   if(prev&&vs.some(v=>v.name===prev)) sel.value=prev;
-  if(vs.length) setVoiceStatus(`✅ Máy thầy đã có <b>${vs.length} giọng Việt</b>: ${vs.map(v=>v.name).join(", ")} — Thầy Nguyên sẽ đọc bằng giọng này.`);
-  else setVoiceStatus(`⚠️ <b>Máy thầy chưa có giọng Việt nào</b> nên bản trước im lặng — Thầy Nguyên sẽ tự dùng <b>giọng Google dự phòng</b> (cần mạng). Muốn giọng máy chuẩn hơn, thầy cài thêm giọng Việt trong phần Cài đặt của máy (xem hướng dẫn cuối trang).`);
+  if(vs.length) setVoiceStatus(`✅ Máy thầy đã có <b>${vs.length} giọng Việt</b>: ${vs.map(v=>v.name).join(", ")} — Thầy Nguyên mặc định vẫn đọc bằng giọng <b>Nam Minh (nam)</b>, thầy đổi ở ô “Nguồn giọng đọc” nếu muốn.`);
+  else setVoiceStatus(`🎙️ Thầy Nguyên mặc định đọc bằng giọng <b>Nam Minh (nam)</b> — giọng Edge của Microsoft, miễn phí, không cần cài gì thêm. Máy thầy chưa có giọng Việt cài sẵn, nhưng không sao vì đã có giọng Nam Minh.`);
 }
 function checkVoices(){
   const all=[]; try{ all.push(...speechSynthesis.getVoices()); }catch(e){}
   const vs=viVoices();
   testVoice(true); // đọc thử lặng (không ghi đè kết quả chẩn đoán)
-  setVoiceStatus(`🔍 Kiểm tra xong: trình duyệt thấy <b>${all.length} giọng</b> nói chung, trong đó <b>${vs.length} giọng Việt</b>${vs.length?": "+vs.map(v=>v.name+" ("+v.lang+")").join(", "):" — chưa có giọng Việt nào"}.<br>Bây giờ thầy bấm “Nghe thử giọng Thầy Nguyên”: ${vs.length?"sẽ đọc bằng giọng Việt trên máy.":"sẽ đọc bằng giọng Google dự phòng, cần mạng và loa bật."}`);
+  setVoiceStatus(`🔍 Kiểm tra xong: trình duyệt thấy <b>${all.length} giọng</b> nói chung, trong đó <b>${vs.length} giọng Việt</b>${vs.length?": "+vs.map(v=>v.name+" ("+v.lang+")").join(", "):" — chưa có giọng Việt nào (không sao, đã có giọng Nam Minh)"}.<br>Thầy Nguyên đang đọc bằng giọng chọn ở ô “Nguồn giọng đọc” — mặc định là <b>Nam Minh (nam)</b>.`);
 }
 if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; setTimeout(loadVoices,800); }
 else setVoiceStatus("⚠️ Trình duyệt này không hỗ trợ đọc giọng trên máy — Thầy Nguyên sẽ dùng giọng Google dự phòng (cần mạng).");
@@ -699,27 +724,11 @@ function beepTest(){
     const ctx=new AC(); const o=ctx.createOscillator(); const g=ctx.createGain();
     o.type="sine"; o.frequency.value=880; g.gain.value=0.25; o.connect(g); g.connect(ctx.destination);
     o.start(); setTimeout(()=>{ o.stop(); ctx.close&&ctx.close(); },700);
-    setVoiceStatus("🔔 Đã phát <b>tiếng bíp 880Hz trong 0,7 giây</b>. Nếu thầy <b>nghe thấy bíp</b> mà không nghe thấy giọng → loa vẫn tốt, lỗi nằm ở giọng đọc (mạng chặn Google hoặc giọng máy). Nếu <b>không nghe cả bíp</b> → loa / âm lượng / tab đang tắt tiếng, thầy kiểm tra loa và nút tắt tiếng của tab trước.");
+    setVoiceStatus("🔔 Đã phát <b>tiếng bíp 880Hz trong 0,7 giây</b>. Nếu thầy <b>nghe thấy bíp</b> mà không nghe thấy giọng → loa vẫn tốt, lỗi nằm ở giọng đọc (mạng chặn máy chủ giọng). Nếu <b>không nghe cả bíp</b> → loa / âm lượng / tab đang tắt tiếng, thầy kiểm tra loa và nút tắt tiếng của tab trước.");
   }catch(e){ setVoiceStatus("⚠️ Không phát được tiếng bíp: "+e.message); }
 }
-let testAudio=null;
 function testVoice(quiet){
-  // Nghe thử dùng file giọng mẫu thu sẵn trên cùng trang (không cần gọi Google lúc bấm).
-  // Nếu file này cũng không kêu thì chắc chắn loa / tab đang có vấn đề, không phải do giọng đọc.
-  if(!quiet){
-    try{
-      if(typeof Audio!=="undefined"){
-        if(!testAudio) testAudio=new Audio();
-        testAudio.src="audio/thay-nguyen-chao.mp3";
-        testAudio.onended=()=>{ setVoiceStatus("✅ Đã phát xong <b>file giọng mẫu Thầy Nguyên</b>. Nếu thầy nghe thấy câu chào thì loa tốt — giờ bấm “Bắt đầu buổi học”, Thầy sẽ đọc câu hỏi bằng giọng dự phòng."); };
-        testAudio.onerror=()=>{ say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!"); };
-        const pr=testAudio.play();
-        if(pr&&pr.catch) pr.catch(()=>{ say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!"); });
-        setVoiceStatus("🔊 Đang phát <b>file giọng mẫu Thầy Nguyên</b> (thu sẵn trên trang)...");
-        return;
-      }
-    }catch(e){}
-  }
+  // Nghe thử dùng đúng giọng đang chọn ở ô “Nguồn giọng đọc” (mặc định: Nam Minh — nam).
   say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!",quiet);
 }
 function resetAll(){ clearInterval(S.timer); S.qNum=0; S.cur=null; S.revealed=false; S.answers=[]; S.flowers=0; S.students.forEach(s=>{s.pts=0;s.streak=0;}); renderBoard(); say("Thầy làm mới buổi học rồi! Bấm bắt đầu để học lại từ đầu nhé!"); }
