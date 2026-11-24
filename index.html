@@ -491,12 +491,17 @@ function speakEdge(text,voice,quiet){
   if(!quiet) setVoiceStatus("🔊 Đang lấy tiếng giọng <b>"+label+"</b> (Edge — Microsoft, miễn phí, cần mạng)...");
   if(typeof EdgeTTS==="undefined"||!EdgeTTS.edgeSynth) return Promise.reject(new Error("EdgeTTS chưa tải"));
   return EdgeTTS.edgeSynth(text,voice,rate).then(bytes=>{
-    if(!quiet) setVoiceStatus("✅ Đã nhận "+bytes.length.toLocaleString("vi-VN")+" byte tiếng giọng <b>"+label+"</b>, đang phát...");
+    const n=bytes.length.toLocaleString("vi-VN");
+    if(!quiet) setVoiceStatus("✅ Đã nhận "+n+" byte tiếng giọng <b>"+label+"</b>, đang phát...");
     const url=URL.createObjectURL(new Blob([bytes],{type:"audio/mpeg"}));
     if(edgeAudio){ try{ edgeAudio.pause(); }catch(e){} }
     edgeAudio=new Audio(); edgeAudio.src=url;
     edgeAudio.onended=()=>{ try{ URL.revokeObjectURL(url); }catch(e){} };
-    return edgeAudio.play();
+    // Lỗi PHÁT (không có loa / tab tắt tiếng) khác lỗi LẤY tiếng: đã nhận được byte
+    // thì không chuyển sang Google nữa — Google cũng sẽ kẹt đúng chỗ phát đó thôi.
+    return edgeAudio.play().catch(e=>{
+      if(!quiet) setVoiceStatus("⚠️ Đã nhận "+n+" byte tiếng giọng <b>"+label+"</b> nhưng trình duyệt không phát được ("+(e&&e.name?e.name:"lỗi")+") — thường do tab đang tắt tiếng hoặc trình duyệt này không có loa. Thầy thử lại trên Chrome máy thật, kiểm tra biểu tượng loa trên tab.");
+    });
   });
 }
 function speak(text,quiet){
