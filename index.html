@@ -109,7 +109,10 @@ body.stage-only #stage{transform:none}
         <select id="rateSel"><option value="0.9">Chậm 0.9</option><option value="1" selected>Bình thường 1.0</option><option value="1.15">Nhanh 1.15</option></select></div>
       </div>
       <label><input type="checkbox" id="ttsOn" checked style="width:auto"> 🔊 Thầy Nguyên đọc câu hỏi &amp; lời khen bằng giọng nói</label>
-      <div class="row" style="margin-top:6px"><button onclick="testVoice()">🎙️ Nghe thử giọng Thầy Nguyên</button></div>
+      <div class="row" style="margin-top:6px"><button onclick="testVoice()">🎙️ Nghe thử giọng Thầy Nguyên</button><button onclick="checkVoices()">🔍 Kiểm tra giọng trên máy này</button></div>
+      <div class="row" style="margin-top:6px"><div><label>Nguồn giọng đọc</label>
+      <select id="voiceMode"><option value="auto" selected>Tự động — giọng máy, không có thì dùng giọng Google dự phòng</option><option value="device">Chỉ dùng giọng Việt trên máy</option><option value="google">Chỉ dùng giọng Google dự phòng (cần mạng)</option></select></div></div>
+      <div id="voiceStatus" class="note" style="margin-top:8px">🔊 Đang kiểm tra giọng trên máy thầy…</div>
     </div>
 
     <div class="card">
@@ -185,6 +188,10 @@ body.stage-only #stage{transform:none}
       <div class="row"><button onclick="openStage()">🔗 Mở stage tab mới</button><button onclick="downloadCSV()">⬇️ Tải bảng điểm (.csv)</button></div>
     </div>
     <p style="margin-top:14px;font-size:12px;color:#94a3b8">LIVE-CLASS Thầy Nguyên — làm theo cảm hứng từ repo LIVE-CLASS (MIT) của Duong Birken. Bản này viết lại hoàn toàn, không dùng ảnh / code gốc. Nhân vật, câu hỏi và lời thoại do Thầy Nguyên làm chủ.</p>
+    <div class="card">
+      <h2>🔊 Cài giọng Việt trên máy (để giọng máy chuẩn hơn)</h2>
+      <small>Nếu máy thầy chưa có giọng Việt, trang vẫn đọc được bằng giọng Google dự phòng. Muốn dùng giọng máy: <b>Mac:</b> Cài đặt hệ thống → Trợ năng → Nội dung được đọc → Giọng hệ thống → Tùy chỉnh → tải giọng Tiếng Việt. <b>Windows:</b> Settings → Time &amp; Language → Language → thêm Tiếng Việt, rồi Speech → thêm giọng Vietnamese. Xong mở lại trang và bấm “Kiểm tra giọng trên máy này”. Nhớ bật loa và dùng Chrome / Edge để nghe ổn nhất.</small>
+    </div>
   </div>
 
   <div id="stageWrap">
@@ -421,9 +428,71 @@ function levelOf(pts){ if(pts>=500) return "🎓 Tốt nghiệp"; if(pts>=400) r
 function shuffle(a){ a=[...a]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function activeTopics(){ return TOPICS.filter(t=>{ const el=$("topic-"+t); return !el || el.checked; }); }
 function buildDeck(){ const tops = activeTopics(); const pool = BANK.filter(q=>tops.includes(q.t)); return shuffle(pool).slice(0,20); }
-function speak(text){ if(!$("ttsOn").checked || !("speechSynthesis" in window)) return; try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang="vi-VN"; u.rate=parseFloat($("rateSel").value||"1"); const v=$("voiceSel").value; if(v){ const vs=speechSynthesis.getVoices().find(x=>x.name===v); if(vs) u.voice=vs; } speechSynthesis.speak(u); }catch(e){} }
-function loadVoices(){ const sel=$("voiceSel"); const vs=speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.toLowerCase().startsWith("vi")); sel.innerHTML='<option value="">— Tự chọn giọng Việt —</option>'+vs.map(v=>`<option>${v.name}</option>`).join(""); if(!vs.length) sel.innerHTML='<option value="">— Máy này chưa có giọng Việt, sẽ dùng giọng mặc định —</option>'; }
-if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+let ttsAudio=null, ttsQueue=[], ttsPlaying=false;
+function viVoices(){ try{ return speechSynthesis.getVoices().filter(v=>v.lang&&v.lang.toLowerCase().startsWith("vi")); }catch(e){ return []; } }
+function setVoiceStatus(html){ const el=$("voiceStatus"); if(el) el.innerHTML=html; }
+function chunkText(text){ const parts=(text.match(/[^.!?,;:\n]+[.!?,;:\n]?/g)||[text]).map(s=>s.trim()).filter(Boolean); const out=[]; let cur=""; const flush=()=>{ if(cur.trim()) out.push(cur.trim()); cur=""; };
+  for(const p of parts){ if(p.length>170){ flush(); const words=p.split(/\s+/); let w=""; for(const x of words){ if((w+" "+x).trim().length>170){ if(w.trim()) out.push(w.trim()); w=x; } else w=(w+" "+x).trim(); } if(w.trim()) out.push(w.trim()); continue; }
+    if((cur+" "+p).trim().length>170){ flush(); cur=p; } else cur=(cur+" "+p).trim(); }
+  flush(); return out.length?out:[text]; }
+function speakGoogle(text){
+  // Giọng dự phòng: Google Translate TTS, chia nhỏ câu (mỗi đoạn < 170 ký tự), phát nối tiếp.
+  ttsQueue=chunkText(text); if(ttsPlaying) return; ttsPlaying=true;
+  const playNext=()=>{
+    const part=ttsQueue.shift();
+    if(!part){ ttsPlaying=false; return; }
+    try{
+      if(!ttsAudio) ttsAudio=new Audio();
+      ttsAudio.src="https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q="+encodeURIComponent(part);
+      ttsAudio.onended=playNext;
+      ttsAudio.onerror=()=>{ ttsPlaying=false; setVoiceStatus("⚠️ Giọng Google dự phòng cũng không phát được — thầy kiểm tra mạng / loa, rồi bấm “Kiểm tra giọng trên máy này”."); };
+      const pr=ttsAudio.play(); if(pr&&pr.catch) pr.catch(()=>{ ttsPlaying=false; });
+    }catch(e){ ttsPlaying=false; }
+  };
+  playNext();
+}
+function speakDevice(text){
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.lang="vi-VN"; u.rate=parseFloat($("rateSel").value||"1");
+    const v=$("voiceSel").value;
+    const vs=viVoices(); const pick=vs.find(x=>x.name===v)||vs[0];
+    if(pick) u.voice=pick;
+    // Chrome hay tự dừng khi đọc dài: resume định kỳ
+    const keepAlive=setInterval(()=>{ try{ if(speechSynthesis.speaking&&speechSynthesis.paused) speechSynthesis.resume(); }catch(e){} },500);
+    u.onend=()=>clearInterval(keepAlive); u.onerror=()=>clearInterval(keepAlive);
+    speechSynthesis.speak(u);
+    setTimeout(()=>{ try{ speechSynthesis.resume(); }catch(e){} },200);
+    return true;
+  }catch(e){ return false; }
+}
+function speak(text){
+  if(!$("ttsOn").checked) return;
+  text=(text||"").replace(/\s+/g," ").trim(); if(!text) return;
+  if(ttsAudio){ try{ ttsAudio.pause(); }catch(e){} ttsPlaying=false; ttsQueue=[]; }
+  const mode=($("voiceMode")&&$("voiceMode").value)||"auto";
+  const hasVi=("speechSynthesis" in window)&&viVoices().length>0;
+  if(mode==="google"||(!hasVi&&mode==="auto")){ setVoiceStatus("🔊 Đang đọc bằng <b>giọng Google dự phòng</b> (máy thầy chưa có giọng Việt cài sẵn — vẫn nghe được bình thường, cần mạng)."); speakGoogle(text); return; }
+  if(!("speechSynthesis" in window)){ setVoiceStatus("⚠️ Trình duyệt này không hỗ trợ đọc giọng trên máy — đang dùng giọng Google dự phòng."); speakGoogle(text); return; }
+  if(!speakDevice(text)){ speakGoogle(text); }
+}
+function loadVoices(){
+  const sel=$("voiceSel"); if(!sel) return;
+  const prev=sel.value;
+  const vs=viVoices();
+  sel.innerHTML='<option value="">— Tự chọn giọng Việt —</option>'+vs.map(v=>`<option>${v.name}</option>`).join("");
+  if(prev&&vs.some(v=>v.name===prev)) sel.value=prev;
+  if(vs.length) setVoiceStatus(`✅ Máy thầy đã có <b>${vs.length} giọng Việt</b>: ${vs.map(v=>v.name).join(", ")} — Thầy Nguyên sẽ đọc bằng giọng này.`);
+  else setVoiceStatus(`⚠️ <b>Máy thầy chưa có giọng Việt nào</b> nên bản trước im lặng — Thầy Nguyên sẽ tự dùng <b>giọng Google dự phòng</b> (cần mạng). Muốn giọng máy chuẩn hơn, thầy cài thêm giọng Việt trong phần Cài đặt của máy (xem hướng dẫn cuối trang).`);
+}
+function checkVoices(){
+  const all=[]; try{ all.push(...speechSynthesis.getVoices()); }catch(e){}
+  const vs=viVoices();
+  testVoice(); // đọc thử trước, rồi mới hiện kết quả chẩn đoán (để giọng đọc không ghi đè lên nó)
+  setVoiceStatus(`🔍 Kiểm tra xong: trình duyệt thấy <b>${all.length} giọng</b> nói chung, trong đó <b>${vs.length} giọng Việt</b>${vs.length?": "+vs.map(v=>v.name+" ("+v.lang+")").join(", "):" — chưa có giọng Việt nào"}.<br>Bây giờ thầy bấm “Nghe thử giọng Thầy Nguyên”: ${vs.length?"sẽ đọc bằng giọng Việt trên máy.":"sẽ đọc bằng giọng Google dự phòng, cần mạng và loa bật."}`);
+}
+if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; setTimeout(loadVoices,800); }
+else setVoiceStatus("⚠️ Trình duyệt này không hỗ trợ đọc giọng trên máy — Thầy Nguyên sẽ dùng giọng Google dự phòng (cần mạng).");
 function feed(html){ const f=$("stFeed"); f.innerHTML=html; $("feedMini").innerHTML="💬 "+html.replace(/<[^>]+>/g,""); }
 function say(text){ $("stSpeech").innerHTML=text; speak(text.replace(/<[^>]+>/g,"")); }
 
