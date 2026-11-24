@@ -109,7 +109,7 @@ body.stage-only #stage{transform:none}
         <select id="rateSel"><option value="0.9">Chậm 0.9</option><option value="1" selected>Bình thường 1.0</option><option value="1.15">Nhanh 1.15</option></select></div>
       </div>
       <label><input type="checkbox" id="ttsOn" checked style="width:auto"> 🔊 Thầy Nguyên đọc câu hỏi &amp; lời khen bằng giọng nói</label>
-      <div class="row" style="margin-top:6px"><button onclick="testVoice()">🎙️ Nghe thử giọng Thầy Nguyên</button><button onclick="checkVoices()">🔍 Kiểm tra giọng trên máy này</button></div>
+      <div class="row" style="margin-top:6px"><button onclick="testVoice()">🎙️ Nghe thử giọng Thầy Nguyên</button><button onclick="checkVoices()">🔍 Kiểm tra giọng trên máy này</button><button onclick="beepTest()">🔔 Thử loa (tiếng bíp)</button></div>
       <div class="row" style="margin-top:6px"><div><label>Nguồn giọng đọc</label>
       <select id="voiceMode"><option value="auto" selected>Tự động — giọng máy, không có thì dùng giọng Google dự phòng</option><option value="device">Chỉ dùng giọng Việt trên máy</option><option value="google">Chỉ dùng giọng Google dự phòng (cần mạng)</option></select></div></div>
       <div id="voiceStatus" class="note" style="margin-top:8px">🔊 Đang kiểm tra giọng trên máy thầy…</div>
@@ -435,18 +435,30 @@ function chunkText(text){ const parts=(text.match(/[^.!?,;:\n]+[.!?,;:\n]?/g)||[
   for(const p of parts){ if(p.length>170){ flush(); const words=p.split(/\s+/); let w=""; for(const x of words){ if((w+" "+x).trim().length>170){ if(w.trim()) out.push(w.trim()); w=x; } else w=(w+" "+x).trim(); } if(w.trim()) out.push(w.trim()); continue; }
     if((cur+" "+p).trim().length>170){ flush(); cur=p; } else cur=(cur+" "+p).trim(); }
   flush(); return out.length?out:[text]; }
-function speakGoogle(text){
+function speakGoogle(text,quiet){
   // Giọng dự phòng: Google Translate TTS, chia nhỏ câu (mỗi đoạn < 170 ký tự), phát nối tiếp.
-  ttsQueue=chunkText(text); if(ttsPlaying) return; ttsPlaying=true;
+  // Mỗi đoạn thử 2 máy chủ Google (translate.google.com rồi translate.googleapis.com) rồi mới báo lỗi.
+  ttsQueue=chunkText(text).map(p=>({text:p,host:0})); if(ttsPlaying) return; ttsPlaying=true;
+  const HOSTS=["https://translate.google.com/translate_tts","https://translate.googleapis.com/translate_tts"];
   const playNext=()=>{
-    const part=ttsQueue.shift();
-    if(!part){ ttsPlaying=false; return; }
+    const item=ttsQueue.shift();
+    if(!item){ ttsPlaying=false; return; }
     try{
       if(!ttsAudio) ttsAudio=new Audio();
-      ttsAudio.src="https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q="+encodeURIComponent(part);
+      ttsAudio.src=HOSTS[item.host]+"?ie=UTF-8&tl=vi&client=tw-ob&q="+encodeURIComponent(item.text);
       ttsAudio.onended=playNext;
-      ttsAudio.onerror=()=>{ ttsPlaying=false; setVoiceStatus("⚠️ Giọng Google dự phòng cũng không phát được — thầy kiểm tra mạng / loa, rồi bấm “Kiểm tra giọng trên máy này”."); };
-      const pr=ttsAudio.play(); if(pr&&pr.catch) pr.catch(()=>{ ttsPlaying=false; });
+      ttsAudio.onerror=()=>{
+        const code=ttsAudio.error?ttsAudio.error.code:"?";
+        if(item.host===0){ item.host=1; ttsQueue.unshift(item); playNext(); return; }
+        ttsPlaying=false;
+        if(!quiet) setVoiceStatus(`⚠️ Giọng Google dự phòng không phát được (mã lỗi âm thanh: ${code}) — trình duyệt chặn tiếng từ Google hoặc mạng không tới được Google. Thầy thử: 1) bấm “🔔 Thử loa” xem loa có kêu bíp không, 2) tắt trình chặn quảng cáo / VPN rồi thử lại, 3) cài giọng Việt trên máy theo hướng dẫn cuối trang để không cần Google nữa.`);
+      };
+      const pr=ttsAudio.play();
+      if(pr&&pr.catch) pr.catch(err=>{
+        if(item.host===0){ item.host=1; ttsQueue.unshift(item); playNext(); return; }
+        ttsPlaying=false;
+        if(!quiet) setVoiceStatus(`⚠️ Trình duyệt không cho phát tiếng (${err&&err.name?err.name:"không rõ lý do"}) — thường do tab đang tắt tiếng hoặc trình duyệt chặn tự phát tiếng. Thầy kiểm tra biểu tượng loa trên tab, bật tiếng tab lên rồi bấm “Nghe thử” lại.`);
+      });
     }catch(e){ ttsPlaying=false; }
   };
   playNext();
@@ -466,15 +478,15 @@ function speakDevice(text){
     return true;
   }catch(e){ return false; }
 }
-function speak(text){
+function speak(text,quiet){
   if(!$("ttsOn").checked) return;
   text=(text||"").replace(/\s+/g," ").trim(); if(!text) return;
   if(ttsAudio){ try{ ttsAudio.pause(); }catch(e){} ttsPlaying=false; ttsQueue=[]; }
   const mode=($("voiceMode")&&$("voiceMode").value)||"auto";
   const hasVi=("speechSynthesis" in window)&&viVoices().length>0;
-  if(mode==="google"||(!hasVi&&mode==="auto")){ setVoiceStatus("🔊 Đang đọc bằng <b>giọng Google dự phòng</b> (máy thầy chưa có giọng Việt cài sẵn — vẫn nghe được bình thường, cần mạng)."); speakGoogle(text); return; }
-  if(!("speechSynthesis" in window)){ setVoiceStatus("⚠️ Trình duyệt này không hỗ trợ đọc giọng trên máy — đang dùng giọng Google dự phòng."); speakGoogle(text); return; }
-  if(!speakDevice(text)){ speakGoogle(text); }
+  if(mode==="google"||(!hasVi&&mode==="auto")){ if(!quiet) setVoiceStatus("🔊 Đang đọc bằng <b>giọng Google dự phòng</b> (máy thầy chưa có giọng Việt cài sẵn — vẫn nghe được bình thường, cần mạng)."); speakGoogle(text,quiet); return; }
+  if(!("speechSynthesis" in window)){ if(!quiet) setVoiceStatus("⚠️ Trình duyệt này không hỗ trợ đọc giọng trên máy — đang dùng giọng Google dự phòng."); speakGoogle(text,quiet); return; }
+  if(!speakDevice(text)){ speakGoogle(text,quiet); }
 }
 function loadVoices(){
   const sel=$("voiceSel"); if(!sel) return;
@@ -488,13 +500,13 @@ function loadVoices(){
 function checkVoices(){
   const all=[]; try{ all.push(...speechSynthesis.getVoices()); }catch(e){}
   const vs=viVoices();
-  testVoice(); // đọc thử trước, rồi mới hiện kết quả chẩn đoán (để giọng đọc không ghi đè lên nó)
+  testVoice(true); // đọc thử lặng (không ghi đè kết quả chẩn đoán)
   setVoiceStatus(`🔍 Kiểm tra xong: trình duyệt thấy <b>${all.length} giọng</b> nói chung, trong đó <b>${vs.length} giọng Việt</b>${vs.length?": "+vs.map(v=>v.name+" ("+v.lang+")").join(", "):" — chưa có giọng Việt nào"}.<br>Bây giờ thầy bấm “Nghe thử giọng Thầy Nguyên”: ${vs.length?"sẽ đọc bằng giọng Việt trên máy.":"sẽ đọc bằng giọng Google dự phòng, cần mạng và loa bật."}`);
 }
 if("speechSynthesis" in window){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; setTimeout(loadVoices,800); }
 else setVoiceStatus("⚠️ Trình duyệt này không hỗ trợ đọc giọng trên máy — Thầy Nguyên sẽ dùng giọng Google dự phòng (cần mạng).");
 function feed(html){ const f=$("stFeed"); f.innerHTML=html; $("feedMini").innerHTML="💬 "+html.replace(/<[^>]+>/g,""); }
-function say(text){ $("stSpeech").innerHTML=text; speak(text.replace(/<[^>]+>/g,"")); }
+function say(text,quiet){ $("stSpeech").innerHTML=text; speak(text.replace(/<[^>]+>/g,""),quiet); }
 
 // ===== RENDER =====
 function renderSeats(){
@@ -676,7 +688,16 @@ function connectLive(){
   addStudent(); addStudent();
 }
 function disconnectLive(){ S.live=false; $("liveTag").textContent="⚪ Chưa lên sóng"; feed("⏹ Thầy Nguyên đã ngắt kết nối giả lập."); }
-function testVoice(){ say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!"); }
+function beepTest(){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC){ setVoiceStatus("⚠️ Trình duyệt này không hỗ trợ âm thanh WebAudio."); return; }
+    const ctx=new AC(); const o=ctx.createOscillator(); const g=ctx.createGain();
+    o.type="sine"; o.frequency.value=880; g.gain.value=0.25; o.connect(g); g.connect(ctx.destination);
+    o.start(); setTimeout(()=>{ o.stop(); ctx.close&&ctx.close(); },700);
+    setVoiceStatus("🔔 Đã phát <b>tiếng bíp 880Hz trong 0,7 giây</b>. Nếu thầy <b>nghe thấy bíp</b> mà không nghe thấy giọng → loa vẫn tốt, lỗi nằm ở giọng đọc (mạng chặn Google hoặc giọng máy). Nếu <b>không nghe cả bíp</b> → loa / âm lượng / tab đang tắt tiếng, thầy kiểm tra loa và nút tắt tiếng của tab trước.");
+  }catch(e){ setVoiceStatus("⚠️ Không phát được tiếng bíp: "+e.message); }
+}
+function testVoice(quiet){ say("Thầy là Thầy Nguyên! Chào mừng các em đến với lớp học tương tác! Ai trả lời nhanh nhất được mười điểm nhé!",quiet); }
 function resetAll(){ clearInterval(S.timer); S.qNum=0; S.cur=null; S.revealed=false; S.answers=[]; S.flowers=0; S.students.forEach(s=>{s.pts=0;s.streak=0;}); renderBoard(); say("Thầy làm mới buổi học rồi! Bấm bắt đầu để học lại từ đầu nhé!"); }
 function clearLifetime(){ if(confirm("Xóa toàn bộ học bạ đã lưu trên máy này?")){ lifetime={}; saveLife(); renderRank(); } }
 function copyStage(){ $("stageLink").select(); document.execCommand("copy"); navigator.clipboard&&navigator.clipboard.writeText($("stageLink").value); alert("Đã copy link stage!"); }
